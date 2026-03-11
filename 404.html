@@ -60,12 +60,21 @@
         const loader = document.getElementById('loading-screen');
 
         function loadGame() {
-            frame.src = TUNNEL_URL;
-            
-            frame.onload = () => {
-                loader.style.display = 'none';
-                frame.style.display = 'block';
-            };
+            // Bypass ngrok browser warning by sending the required header via a fetch request first
+            fetch(TUNNEL_URL, {
+                method: 'GET',
+                headers: {
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            }).finally(() => {
+                // Now that the browser has the "bypass" state for this domain, load the iframe
+                frame.src = TUNNEL_URL;
+                
+                frame.onload = () => {
+                    loader.style.display = 'none';
+                    frame.style.display = 'block';
+                };
+            });
 
             // Error handling for timeout or unreachable tunnel
             setTimeout(() => {
