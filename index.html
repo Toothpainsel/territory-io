@@ -1213,6 +1213,24 @@
             if (ownerIdx === 1) centerCameraOn(sx + 3, sy + 3);
         }
 
+        function getWarCostMultiplier(entityIdx) {
+            const activeWar = state.wars.find(w => w.active && (w.host === entityIdx || w.allies.includes(entityIdx)));
+            if (!activeWar) return 1;
+            
+            // Host always pays 100x
+            if (activeWar.host === entityIdx) return 100;
+            
+            // Ally check: Teammates of host pay regular price (1x), other allies pay 100x
+            const hostEntity = state.entities[activeWar.host];
+            const currentEntity = state.entities[entityIdx];
+            
+            if (hostEntity.teamId !== undefined && hostEntity.teamId === currentEntity.teamId) {
+                return 1;
+            }
+            
+            return 100;
+        }
+
         function claim(x, y, free = false, ownerIdx = 1) {
             const idx = y * CONFIG.COLS + x;
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
@@ -1221,10 +1239,9 @@
             const isWater = state.tileTypes[idx] === 0;
             let currentCost = isWater ? (entity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : entity.tileCost;
             
-            // 100x Price when at war (only for the war host)
-            if (ownerIdx === 1 && !free) {
-                const activeWar = state.wars.find(w => w.active && w.host === 1);
-                if (activeWar) currentCost *= 100;
+            // Apply war multiplier if not free
+            if (!free) {
+                currentCost *= getWarCostMultiplier(ownerIdx);
             }
             
             // Check if we can afford it (only for player)
@@ -1753,8 +1770,7 @@
 
             // Calculate Total Plan Cost
             let totalCost = 0;
-            const activeWar = state.wars.find(w => w.active && w.host === 1);
-            const warMultiplier = activeWar ? 100 : 1;
+            const warMultiplier = getWarCostMultiplier(1);
             
             const playerEntity = state.entities[1];
             state.planning.turns.forEach(turn => {
@@ -1816,8 +1832,7 @@
 
             // Pre-deployment balance check
             let totalCost = 0;
-            const isHost = war.host === 1;
-            const warMultiplier = isHost ? 100 : 1;
+            const warMultiplier = getWarCostMultiplier(1);
             const playerEntity = state.entities[1];
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
@@ -2368,11 +2383,11 @@
             
             // 100x Cost Indicator during war (for player)
             const playerEntity = state.entities[1];
-            const activeWar = state.wars.find(w => w.active && w.host === 1);
-            const displayCost = activeWar ? playerEntity.tileCost * 100 : playerEntity.tileCost;
+            const warMultiplier = getWarCostMultiplier(1);
+            const displayCost = playerEntity.tileCost * warMultiplier;
             const costEl = document.getElementById('stat-cost');
             costEl.innerText = `$${Math.floor(displayCost)}`;
-            costEl.className = activeWar ? 'text-red-500 animate-pulse' : '';
+            costEl.className = warMultiplier > 1 ? 'text-red-500 animate-pulse' : '';
             
             document.getElementById('stat-city-count').innerText = state.cityCount;
             document.getElementById('stat-dam-count').innerText = state.damCount;
@@ -2443,8 +2458,7 @@
                     case 'balance': value = Math.floor(e.balance); suffix = ''; break;
                     case 'dams': value = e.damCount; suffix = ' Dams'; break;
                     case 'cost': 
-                        let cost = e.tileCost;
-                        if (activeWar && activeWar.host === entityIdx) cost *= 100;
+                        let cost = e.tileCost * getWarCostMultiplier(entityIdx);
                         value = Math.floor(cost); suffix = ''; break;
                 }
                 return { name: e.name, color: e.color, value: Number(value), suffix, id: e.id, isPlayer: e.type === 'player', ownedCount: e.ownedCount };
