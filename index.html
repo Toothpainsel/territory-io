@@ -3,82 +3,2502 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Territory.io - Loading...</title>
+    <title>Territory.io - Expanded World</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+        body {
             background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        #game-container {
+            position: absolute;
+            width: 3840px; 
+            height: 2160px;
+            transform-origin: 0 0;
+            will-change: transform;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: pixelated;
+        }
+        #game-map {
+            position: absolute;
+            top: 0; left: 0;
+            background-color: #0f172a;
+        }
+        #game-canvas {
+            display: block;
+            width: 3840px;
+            height: 2160px;
+        }
+        .tile {
+            width: 10px;
+            height: 10px;
+            position: relative;
+        }
+        .tile.water { background-color: #1e3a8a; opacity: 0.6; }
+        .tile.land { background-color: #0f172a; }
+        .tile.owned {
+            background-color: #3b82f6;
+            box-shadow: inset 0 0 2px rgba(255,255,255,0.2);
+            z-index: 10;
+        }
+        .tile.bridge {
+            background-color: #78350f !important;
+            border: 1px solid #451a03;
+            z-index: 11;
+        }
+        .tile.dam {
+            background-color: #06b6d4 !important;
+            opacity: 1 !important;
+            z-index: 12;
+            box-shadow: inset 0 0 4px #fff;
+        }
+        .tile.dam::after {
+            content: '⚡';
+            font-size: 7px;
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .tile.city {
+            background-color: #f59e0b !important;
+            box-shadow: 0 0 8px #f59e0b;
+            z-index: 15;
+        }
+        .tile.capital {
+            background-color: #ef4444 !important;
+            box-shadow: 0 0 12px #ef4444;
+            z-index: 16;
+        }
+        .tile.city::after { content: '🏠'; font-size: 8px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .tile.capital::after { content: '👑'; font-size: 9px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .tile.building::after { content: '🏗️'; font-size: 8px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .plane {
+            position: absolute;
+            font-size: 14px;
+            z-index: 100;
+            pointer-events: none;
+            transition: all 2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #user-territory-label {
+            position: absolute;
+            pointer-events: none;
+            z-index: 40;
+            text-align: center;
+            white-space: nowrap;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,1));
+        }
+        .bonus-popup {
+            position: absolute;
+            color: #4ade80;
+            font-weight: 700;
+            font-size: 12px;
+            pointer-events: none;
+            animation: float-up 1s ease-out forwards;
+            z-index: 50;
+        }
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+        .active-btn {
+            background-color: #3b82f6 !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        
+        .city-label {
+            position: absolute;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 4px;
+            border-radius: 4px;
+            pointer-events: none;
+            transform: translate(-50%, -16px);
+            z-index: 20;
+            white-space: nowrap;
+        }
+        .capital-label { border: 1px solid #ef4444; color: #fca5a5; }
+        .bot-label { background: rgba(15, 23, 42, 0.9); border-width: 2px; }
+
+        /* Donut Menu Styling */
+        #city-donut-menu {
+            position: absolute;
+            width: 160px; /* Increased from 120px */
+            height: 160px; /* Increased from 120px */
+            pointer-events: auto;
+            z-index: 200;
+            display: none;
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #city-donut-menu.active {
+            display: block;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        .donut-option {
+            position: absolute;
+            width: 50px; /* Increased from 40px */
+            height: 50px; /* Increased from 40px */
+            background: rgba(15, 23, 42, 0.98);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #3b82f6;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
         }
-        .loader {
-            text-align: center;
-            padding: 20px;
+        .donut-option:hover {
+            background: #1e293b;
+            border-color: #3b82f6;
+            transform: scale(1.1);
         }
-        .spinner {
-            border: 4px solid rgba(59, 130, 246, 0.1);
-            border-left-color: #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        iframe {
+        .donut-option:active { transform: scale(0.95); }
+        #donut-develop { top: 0; left: 50%; transform: translate(-50%, -50%); }
+        #donut-develop:hover { transform: translate(-50%, -50%) scale(1.1); }
+        #donut-develop:active { transform: translate(-50%, -50%) scale(0.95); }
+        #donut-fortify { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+        #donut-fortify:hover { transform: translate(-50%, 50%) scale(1.1); }
+        #donut-fortify:active { transform: translate(-50%, 50%) scale(0.95); }
+        #justification-bar { width: 0%; }
+        .donut-label {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: none;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            font-weight: bold;
+            color: #f8fafc;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+        .donut-price {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            font-weight: bold;
+            color: #fbbf24;
+            white-space: nowrap;
+        }
+        .donut-count {
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            font-weight: bold;
+            background: #3b82f6;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        #pc-profiler {
+            display: none;
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'monospace';
+            font-size: 10px;
+            color: #94a3b8;
+            pointer-events: none;
+            z-index: 1000;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .profiler-row { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 2px; }
+        .profiler-val { color: #38bdf8; font-weight: bold; }
+        .profiler-seed { color: #fbbf24; font-weight: bold; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
-    <div id="loading-screen" class="loader">
-        <div class="spinner"></div>
-        <p>Connecting to Server...</p>
+
+    <div id="pc-profiler">
+        <div class="text-[10px] font-bold uppercase text-slate-500 mb-2 border-b border-slate-700 pb-1">Advanced Profiler (PC)</div>
+        <div class="profiler-row"><span>Latency:</span> <span class="profiler-val" id="prof-lat">0ms</span></div>
+        <div class="profiler-row"><span>Render:</span> <span class="profiler-val" id="prof-fps">60fps</span></div>
+        <div class="profiler-row"><span>Entity Count:</span> <span class="profiler-val" id="prof-ent">0</span></div>
+        <div class="profiler-row border-t border-slate-700 mt-2 pt-1"><span>Tile ID:</span> <span class="profiler-val" id="prof-tile">N/A</span></div>
+        <div class="profiler-row"><span>Seed:</span> <span class="profiler-seed" id="prof-seed">N/A</span></div>
+        <div class="profiler-row"><span>Status:</span> <span class="profiler-val" id="prof-status">IDLE</span></div>
     </div>
-    
-    <iframe id="game-frame" src=""></iframe>
+
+    <div id="update-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-blue-500/50 w-full max-w-xs shadow-2xl text-center">
+            <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#3b82f6" viewBox="0 0 256 256"><path d="M240,128a104,104,0,1,1-208,0,8,8,0,0,1,16,0,88,88,0,1,0,88-88,8,8,0,0,1,0-16A104.11,104.11,0,0,1,240,128ZM128,72a8,8,0,0,0-8,8v48a8,8,0,0,0,8,8h40a8,8,0,0,0,0-16H136V80A8,8,0,0,0,128,72Z"></path></svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2 uppercase italic">Update Available</h2>
+            <p class="text-slate-400 text-sm mb-6 leading-relaxed">A new version of Territory.io is available. Please refresh to receive the latest updates and fixes.</p>
+            <button onclick="location.reload()" class="w-full bg-blue-600 py-4 rounded-xl font-bold text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
+                REFRESH NOW
+            </button>
+        </div>
+    </div>
+
+    <div id="city-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 w-full max-w-xs shadow-2xl">
+            <h2 class="text-xl font-bold text-amber-500 mb-2 uppercase">Found City</h2>
+            <label for="city-name-input" class="sr-only">City Name</label>
+            <input type="text" id="city-name-input" maxlength="10" placeholder="City Name" title="City Name" aria-label="Enter city name"
+                   class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl mb-4 text-white text-center font-bold outline-none">
+            <div class="flex gap-2">
+                <button onclick="closeCityModal()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-slate-300">CANCEL</button>
+                <button onclick="confirmCityBuild()" class="flex-1 bg-amber-600 py-3 rounded-xl font-bold text-white shadow-lg">BUILD</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diplomacy Modal -->
+    <div id="diplomacy-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[300] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h2 id="diplo-entity-name" class="text-2xl font-bold text-white uppercase tracking-tight">ENTITY NAME</h2>
+                    <p id="diplo-entity-status" class="text-xs text-slate-500 font-bold uppercase mt-1">Status: Neutral</p>
+                </div>
+                <button onclick="closeDiplomacy()" class="text-slate-500 hover:text-white transition-colors" title="Close" aria-label="Close diplomacy modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">Territory</div>
+                        <div id="diplo-entity-tiles" class="text-lg font-bold text-white">0 Tiles</div>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">Cities</div>
+                        <div id="diplo-entity-cities" class="text-lg font-bold text-white">0 Cities</div>
+                    </div>
+                </div>
+
+                <div id="diplo-actions" class="space-y-3 pt-4">
+                    <button id="btn-propose-alliance" onclick="proposeAlliance()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-3">
+                        <span>🤝</span> PROPOSE ALLIANCE
+                    </button>
+                    <button id="btn-send-aid" onclick="openAidModal()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-3">
+                        <span>💰</span> SEND AID
+                    </button>
+                    <button id="btn-declare-war" onclick="startJustification()" class="w-full bg-red-600 hover:bg-red-500 py-4 rounded-2xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-3">
+                        <span>⚔️</span> DECLARE WAR
+                    </button>
+                    <div id="justification-progress" class="hidden w-full bg-slate-800 rounded-2xl p-4 border border-red-500/20">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] text-red-400 font-bold uppercase">Justifying...</span>
+                            <span id="justification-timer" class="text-[10px] text-white font-mono">0 Cycles</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                            <div id="justification-bar" class="h-full bg-red-600 transition-all"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aid Modal -->
+    <div id="aid-modal" class="hidden fixed inset-0 bg-slate-950/90 z-[400] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm">
+            <h3 class="text-xl font-bold text-white mb-4 uppercase">Send Aid</h3>
+            <label for="aid-amount" class="sr-only">Aid Amount</label>
+            <input type="number" id="aid-amount" placeholder="Amount" title="Aid Amount" aria-label="Enter aid amount"
+                   class="w-full bg-slate-800 p-4 rounded-xl mb-4 text-white font-bold outline-none focus:border-emerald-500 border border-slate-800">
+            <div class="flex gap-3">
+                <button onclick="closeAidModal()" class="flex-1 bg-slate-800 py-4 rounded-xl font-bold text-slate-400">CANCEL</button>
+                <button onclick="sendAid()" class="flex-1 bg-emerald-600 py-4 rounded-xl font-bold text-white">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assault Planning Modal -->
+    <div id="assault-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[500] flex flex-col items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-lg shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white uppercase tracking-tighter">Assault Plan</h2>
+                <div id="plan-war-id" class="text-[10px] text-red-500 font-mono font-bold px-2 py-1 bg-red-500/10 rounded border border-red-500/20">WAR ID: ---</div>
+            </div>
+
+            <div class="grid grid-cols-5 gap-2 mb-6">
+                <!-- Turn Buttons -->
+                <script>
+                    for(let i=1; i<=10; i++) {
+                        document.write(`<button id="turn-btn-${i}" onclick="setPlanTurn(${i-1})" class="py-2 rounded-xl font-bold text-xs transition-all bg-slate-800 text-slate-500 border border-white/5">T${i}</button>`);
+                    }
+                </script>
+            </div>
+
+            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 mb-6 text-center">
+                <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Planning Turn</div>
+                <div id="current-planning-turn" class="text-3xl font-black text-white">TURN 1</div>
+                <div id="turn-tile-count" class="text-[10px] text-blue-400 font-bold uppercase mt-2">0 Tiles Selected</div>
+                <div id="total-plan-cost" class="text-[10px] text-yellow-400 font-bold uppercase mt-1">Total Cost: $0</div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="cancelPlan()" class="flex-1 bg-slate-800 py-4 rounded-2xl font-bold text-slate-400 uppercase tracking-widest text-[10px]">Cancel</button>
+                <button onclick="hideAssaultModal()" class="flex-1 bg-blue-600 py-4 rounded-2xl font-bold text-white uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20">Select on Map</button>
+                <button id="deploy-plan-btn" onclick="deployPlan()" class="flex-1 bg-red-600/50 cursor-not-allowed py-4 rounded-2xl font-bold text-white/50 uppercase tracking-widest text-[10px]" disabled>Deploy Plan</button>
+            </div>
+        </div>
+        <p class="mt-6 text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em]">Select enemy tiles on the map to add them to this turn</p>
+    </div>
+
+    <!-- Planning HUD -->
+    <div id="planning-hud" class="hidden fixed bottom-32 left-1/2 -translate-x-1/2 z-[400] bg-slate-900/95 backdrop-blur-xl p-4 rounded-3xl border-2 border-red-500/30 pointer-events-auto shadow-2xl flex items-center gap-6">
+        <div class="flex flex-col">
+            <span class="text-[8px] text-red-400 font-black uppercase tracking-widest">Planning Assault</span>
+            <span id="hud-planning-turn" class="text-xl font-black text-white uppercase">Turn 1</span>
+            <span id="hud-turn-tile-count" class="text-[8px] text-slate-500 font-bold uppercase mt-1">0 Tiles</span>
+            <span id="hud-plan-cost" class="text-[8px] text-yellow-500 font-bold uppercase">Cost: $0</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="setPlanTurn(state.planning.activeTurn - 1)" class="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 text-white" title="Previous Turn" aria-label="Switch to previous planning turn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path></svg>
+            </button>
+            <button onclick="setPlanTurn(state.planning.activeTurn + 1)" class="p-2 bg-slate-800 rounded-xl hover:bg-slate-700 text-white" title="Next Turn" aria-label="Switch to next planning turn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path></svg>
+            </button>
+        </div>
+        <div class="h-8 w-[1px] bg-white/10"></div>
+        <button onclick="showAssaultModal()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl font-bold text-[10px] text-white uppercase tracking-widest transition-all">
+            Review & Deploy
+        </button>
+    </div>
+
+    <!-- War Panel Icon -->
+    <div id="war-panel-icon" class="hidden fixed top-24 left-6 z-[100] cursor-pointer active:scale-95 transition-transform">
+        <div class="bg-red-600 p-4 rounded-2xl shadow-lg border border-red-400/20 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40ZM128,192a64,64,0,1,1,64-64A64.07,64.07,0,0,1,128,192Z"></path></svg>
+        </div>
+    </div>
+
+    <!-- War Panel Modal -->
+    <div id="war-panel-modal" class="hidden fixed inset-0 bg-slate-950/90 z-[600] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-white">WAR REPORT</h2>
+                <button onclick="closeWarPanel()" class="text-slate-500 hover:text-white">CLOSE</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-8">
+                <!-- Our Side -->
+                <div class="space-y-4">
+                    <h3 class="text-emerald-500 font-bold uppercase tracking-widest">ALLY SIDE</h3>
+                    <div id="war-allies-list" class="space-y-2"></div>
+                    <div class="bg-slate-800 p-4 rounded-2xl">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">Total Losses</div>
+                        <div id="war-ally-losses" class="text-xl font-bold text-white">0 Tiles | 0 Cities</div>
+                    </div>
+                </div>
+                <!-- Enemy Side -->
+                <div class="space-y-4">
+                    <h3 class="text-red-500 font-bold uppercase tracking-widest">ENEMY SIDE</h3>
+                    <div id="war-enemies-list" class="space-y-2"></div>
+                    <div class="bg-slate-800 p-4 rounded-2xl">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">Total Losses</div>
+                        <div id="war-enemy-losses" class="text-xl font-bold text-white">0 Tiles | 0 Cities</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-white/5 flex gap-4">
+                <button onclick="proposePeace('white')" class="flex-1 bg-slate-800 py-4 rounded-2xl font-bold text-white">WHITE PEACE</button>
+                <button onclick="proposePeace('keep')" class="flex-1 bg-slate-800 py-4 rounded-2xl font-bold text-white">END WAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-screen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm">
+            <h1 class="text-3xl font-bold text-center text-blue-500 mb-2 italic">TERRITORY.IO</h1>
+            <p class="text-[10px] text-center text-slate-500 mb-6 uppercase tracking-widest font-bold">Expanded World v2.3</p>
+            
+            <div class="flex gap-2 mb-6">
+                <button id="tab-single" onclick="setLoginTab('single')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg">Single</button>
+                <button id="tab-multi" onclick="setLoginTab('multi')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Multi</button>
+                <button id="tab-custom" onclick="setLoginTab('custom')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Custom</button>
+            </div>
+
+            <div id="single-panel">
+                <input type="text" id="username-input" maxlength="12" placeholder="Commander Name" title="Commander Name" aria-label="Enter your commander name"
+                       class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl mb-4 text-white text-center font-bold outline-none focus:border-blue-500 transition-colors">
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label for="spawn-type" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Spawn Selection</label>
+                        <select id="spawn-type" title="Spawn Selection"
+                                class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
+                            <option value="random">Random Spawn</option>
+                            <option value="selectable">Selectable Spawn</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="bot-difficulty" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Difficulty</label>
+                            <select id="bot-difficulty" title="Bot Difficulty"
+                                    class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
+                                <option value="ez">Easy Mode</option>
+                                <option value="strategic">Strategic Mode</option>
+                                <option value="hard">Hard Mode</option>
+                                <option value="insane">Insane Mode</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bot-count" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Bot Count</label>
+                            <input type="number" id="bot-count" min="1" max="50" value="20" title="Bot Count"
+                                   class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="startGame('single')" class="w-full bg-blue-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform">
+                    SPAWN
+                </button>
+            </div>
+
+            <div id="multi-panel" class="hidden">
+                <div class="space-y-3">
+                    <label for="multi-username" class="sr-only">Multiplayer Username</label>
+                    <input type="text" id="multi-username" placeholder="Username" title="Username" aria-label="Enter multiplayer username"
+                           class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl text-white text-center font-bold outline-none focus:border-purple-500 transition-colors">
+                    <label for="multi-password" class="sr-only">Multiplayer Password</label>
+                    <input type="password" id="multi-password" placeholder="Password" title="Password" aria-label="Enter multiplayer password"
+                           class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl text-white text-center font-bold outline-none focus:border-purple-500 transition-colors">
+                    <button onclick="startGame('multi')" class="w-full bg-purple-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform">
+                        LOGIN & SPAWN
+                    </button>
+                    <p class="text-[9px] text-center text-slate-500 uppercase font-bold">Requires territory.io account</p>
+                </div>
+            </div>
+
+            <div id="custom-panel" class="hidden">
+                <div class="space-y-4">
+                    <div class="flex flex-col items-center gap-3">
+                        <div id="pattern-preview" class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden">
+                            <span class="text-[10px] text-slate-500">PREVIEW</span>
+                        </div>
+                        <label class="w-full">
+                            <input type="file" id="pattern-upload" accept="image/*" class="hidden" onchange="handlePatternUpload(this)">
+                            <div class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl text-center cursor-pointer transition-colors">
+                                <span class="text-[10px] font-bold text-slate-300 uppercase">Upload Pattern</span>
+                            </div>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-center text-slate-500 uppercase font-bold">Upload an image to use as territory pattern</p>
+                    <button onclick="setLoginTab('single')" class="w-full bg-slate-700 py-3 rounded-xl font-bold text-white text-[10px] uppercase tracking-wider">Back to Start</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui" class="hidden fixed inset-0 pointer-events-none z-50 p-4 flex flex-col justify-between">
+        <div id="notifications" class="fixed top-24 right-4 flex flex-col items-end gap-2 z-[1000]"></div>
+        <div class="flex justify-between items-start">
+            <div class="space-y-2">
+                <div class="bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-white/5 pointer-events-auto shadow-xl">
+                    <div class="text-[10px] text-slate-500 font-bold uppercase">Treasury (Max: <span id="stat-max">$0</span>)</div>
+                    <div class="text-xl font-mono font-bold text-yellow-400" id="stat-balance">$0</div>
+                </div>
+                <!-- No Capital Warning -->
+                <div id="no-capital-warning" class="hidden bg-red-600/90 backdrop-blur-md p-3 rounded-2xl border border-red-400/20 pointer-events-auto shadow-lg animate-pulse">
+                    <div class="text-white font-bold text-[10px] uppercase text-center mb-2">Capital Destroyed!</div>
+                    <button id="btn-rebuild-capital" onclick="rebuildCapital()" class="w-full bg-white text-red-600 py-2 rounded-xl font-bold text-[9px] uppercase hover:bg-slate-100 transition-colors">Rebuild ($50k+)</button>
+                </div>
+
+                <!-- Leaderboard UI -->
+                <div id="leaderboard-ui" class="bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-white/5 pointer-events-auto shadow-xl w-64">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">Leaderboard</div>
+                        <select id="leaderboard-select" onchange="state.leaderboardMode = this.value; updateLeaderboard()" class="bg-slate-800 border border-slate-700 rounded-lg text-[9px] font-bold text-white px-2 py-1 outline-none focus:border-blue-500" title="Select Leaderboard">
+                            <option value="tiles">Territory Size</option>
+                            <option value="ovcd">OVCD (Dev)</option>
+                            <option value="wars">Wars Won</option>
+                            <option value="cities">City Count</option>
+                            <option value="balance">Value Balance</option>
+                            <option value="dams">Dams</option>
+                            <option value="cost">Tile Cost</option>
+                        </select>
+                    </div>
+                    <div id="leaderboard-list" class="space-y-1 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- Leaderboard items will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intermission Timer -->
+            <div id="intermission-hud" class="hidden bg-slate-900/95 backdrop-blur-xl p-6 rounded-3xl border-2 border-blue-500/30 pointer-events-auto shadow-[0_0_50px_rgba(59,130,246,0.2)] text-center transform scale-110">
+                <div class="text-[10px] text-blue-400 font-black uppercase tracking-[0.3em] mb-1">Intermission</div>
+                <div id="intermission-timer" class="text-4xl font-mono font-black text-white">00:40</div>
+                <div class="text-[9px] text-slate-500 font-bold uppercase mt-2">Select your starting position</div>
+            </div>
+            
+            <div class="bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-white/5 pointer-events-auto text-right">
+                <div class="text-[10px] text-slate-500 font-bold uppercase">Cycle</div>
+                <div class="text-base font-mono font-bold text-blue-400" id="cycle-timer">0.0s</div>
+                <div class="w-16 h-1 bg-slate-800 rounded-full mt-1 overflow-hidden ml-auto">
+                    <div id="cycle-bar" class="h-full bg-blue-500 w-0"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-3">
+            <div id="cost-indicator" class="bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 pointer-events-auto flex gap-4 text-[10px] font-bold uppercase tracking-tight">
+                <span class="text-white">Tile: <span id="stat-cost">$0</span></span>
+                <span class="text-amber-300">City: <span id="stat-city-count">0</span></span>
+                <span class="text-cyan-400">Dams: <span id="stat-dam-count">0</span></span>
+                <span class="text-purple-400">Transport: $500</span>
+            </div>
+            
+            <div class="flex gap-2 pointer-events-auto">
+                <button id="mode-paint" onclick="setMode('paint')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 active-btn transition-all relative" title="Paint Mode" aria-label="Switch to paint mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31L144,67.31,188.69,112ZM181,37l38,38L200,94,162,56Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">1</span>
+                </button>
+                <button id="mode-city" onclick="setMode('city')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="City Mode" aria-label="Switch to city mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M240,208H224V96a16,16,0,0,0-16-16H144V40a16,16,0,0,0-16-16H48A16,16,0,0,0,32,40V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM48,40h80V208H48ZM144,96h64V208H144Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">2</span>
+                </button>
+                <button id="mode-transport" onclick="setMode('transport')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Transport Mode" aria-label="Switch to transport mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M245.52,118.83l-72.78-43.67a8,8,0,0,0-8.24,0l-29.3,17.58a8,8,0,0,0-3.32,10.15l23,45.92L83.56,190.2,46.1,171.47a8,8,0,0,0-10.74,3.58L22,201.73a8,8,0,0,0,4.61,10.63l44.3,16.61a8,8,0,0,0,8.19-1.92L116,192,238.48,131a8,8,0,0,0,7-12.17Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">3</span>
+                </button>
+                <button id="mode-pan" onclick="setMode('pan')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Pan Mode" aria-label="Switch to pan mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M200,128a8,8,0,0,1-8,8H136v56a8,8,0,0,1-16,0V136H64a8,8,0,0,1,0-16h56V64a8,8,0,0,1,16,0v56h56A8,8,0,0,1,200,128Z"></path><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">4</span>
+                </button>
+            </div>
+            
+            <!-- Zoom Controls (only visible in pan mode) -->
+            <div id="zoom-controls" class="hidden flex gap-2 pointer-events-auto">
+                <button onclick="changeZoom(-CONFIG.ZOOM_STEP)" class="bg-slate-800 p-4 rounded-2xl border border-white/5 hover:bg-slate-700 transition-all" title="Zoom Out" aria-label="Zoom out of the map">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path></svg>
+                </button>
+                <button onclick="changeZoom(CONFIG.ZOOM_STEP)" class="bg-slate-800 p-4 rounded-2xl border border-white/5 hover:bg-slate-700 transition-all" title="Zoom In" aria-label="Zoom into the map">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                </button>
+                <div class="bg-slate-900/90 backdrop-blur-md px-4 py-4 rounded-2xl border border-white/10 flex items-center justify-center">
+                    <span id="zoom-level" class="text-white text-xs font-bold font-mono">100%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewport">
+        <div id="game-container">
+            <div id="game-map"></div>
+            <div id="city-donut-menu">
+                <div class="donut-option" id="donut-develop">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#3b82f6" viewBox="0 0 256 256"><path d="M224,120v16a8,8,0,0,1-8,8H144v72a8,8,0,0,1-8,8H120a8,8,0,0,1-8-8V144H40a8,8,0,0,1-8-8V120a8,8,0,0,1,8-8h72V40a8,8,0,0,1,8-8h16a8,8,0,0,1,8,8v72h72A8,8,0,0,1,224,120Z"></path></svg>
+                    <div class="donut-label" id="donut-develop-label">hj0</div>
+                    <div class="donut-price" id="donut-develop-price">$100</div>
+                    <div class="donut-count" id="donut-develop-count">0</div>
+                </div>
+                <div class="donut-option" id="donut-fortify">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#94a3b8" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40ZM128,192a64,64,0,1,1,64-64A64.07,64.07,0,0,1,128,192Z"></path></svg>
+                    <div class="donut-label text-slate-500">Fortify</div>
+                    <div class="donut-price text-slate-500">Soon</div>
+                </div>
+            </div>
+            <div id="user-territory-label">
+                <div id="label-name" class="text-white font-bold text-[12px] uppercase"></div>
+                <div id="label-balance" class="text-yellow-400 font-mono text-[14px] font-bold"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const TUNNEL_URL = 'http://safe-putting.gl.at.ply.gg:21804/game.html';
-        const frame = document.getElementById('game-frame');
-        const loader = document.getElementById('loading-screen');
+        const CONFIG = {
+            TILE_SIZE: 10,
+            COLS: 384,
+            ROWS: 216,
+            VAL_PER_TILE: 150,
+            CYCLE: 10,
+            BRIDGE_MULTIPLIER: 5,
+            CITY_BUILD_TIME: 20000,
+            CAPITAL_BONUS: 5,
+            CITY_BONUS: 1,
+            CITY_MAX_BONUS: 0.05, // 5% bonus per city
+            DAM_BONUS: 10,
+            MAX_DAMS: 100,
+            TRANSPORT_COST: 500,
+            MIN_CITY_DISTANCE: 5,
+            UPDATE_CHECK_INTERVAL: 60000, // Check every 60 seconds
+            MIN_ZOOM: 0.2,
+            MAX_ZOOM: 3.0,
+            ZOOM_STEP: 0.2
+        };
 
-        function loadGame() {
-            frame.src = TUNNEL_URL;
+        const state = {
+            version: '2.3.1', // Current version tag
+            username: '',
+            playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
+            initialized: false, // Prevent multiple initializations
+            balance: 1000,
             
-            frame.onload = () => {
-                loader.style.display = 'none';
-                frame.style.display = 'block';
-            };
+            // --- Memory Optimized Data Structures (Uint8Arrays for 8GB RAM systems) ---
+            // 0: water, 1: land, 2: claimed (yu6), 3: bridge, 4: dam, 5: city, 6: capital
+            tileTypes: new Uint8Array(384 * 216), 
+            // 0: Unclaimed, 1: Player, 2-21: Bots
+            tileOwners: new Uint8Array(384 * 216),
+            // 0-8: development level (hj)
+            cityLevels: new Uint8Array(384 * 216), 
+            // Bitmask: 1: being built, 2: is city/capital, 4: has label, 8: dam-ready, 16: border (rre5), 32: dam-icon
+            tileFlags: new Uint8Array(384 * 216),
+            
+            entities: [], // { id: 'pr??', type: 'player', balance: 1000, color: '#3b82f6', ... }
+            wars: [], // Active wars: { id: 'tky??????', host: 1, target: 2, justification: 0, active: false, ... }
+            alliances: new Set(), // Set of "owner1-owner2" strings
+            
+            planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null },
+            assaultInProgress: false,
+            activeWarId: null,
+            
+            spawnSettings: { type: 'random', difficulty: 'ez', botCount: 20 },
+            leaderboardMode: 'tiles', // tiles, ovcd, wars, cities, balance, dams, cost
+            isSelectingSpawn: false,
+            intermissionTimer: 40,
+            intermissionActive: false,
+            
+            ownedCount: 0,
+            cityCount: 0,
+            damCount: 0, // Number of unique dam clusters
+            cityIndices: new Set(),
+            damIndices: new Set(),
+            hasCapital: false,
+            tileCost: 10,
+            cycleTimer: 0,
+            lastTick: Date.now(),
+            mode: 'paint',
+            zoom: 1.0,
+            customPattern: null, // User uploaded image pattern
+            isInteracting: false,
+            panX: 0, panY: 0,
+            lastTouchX: 0, lastTouchY: 0,
+            pendingCityIdx: null,
+            activeDonutIdx: null,
+            capitalPos: {x: 0, y: 0},
+            bounds: { minX: 384, maxX: 0, minY: 216, maxY: 0 }, // Incremental bounding box
+            isPC: !('ontouchstart' in window),
+            lastFrameTime: performance.now(),
+            frameCount: 0,
+            fps: 0,
+            lastFpsUpdate: performance.now()
+        };
 
-            // Error handling for timeout
-            setTimeout(() => {
-                if (loader.style.display !== 'none') {
-                    loader.innerHTML = `
-                        <p style="color: #ef4444;">Connection Failed</p>
-                        <p style="font-size: 12px; color: #94a3b8;">The server may be offline. Please try again later.</p>
-                        <button onclick="location.reload()" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px;">Retry</button>
-                    `;
-                }
-            }, 8000);
+        const viewport = document.getElementById('viewport');
+        const container = document.getElementById('game-container');
+        const map = document.getElementById('game-map');
+        const canvas = document.createElement('canvas');
+        canvas.id = 'game-canvas';
+        canvas.width = 3840;
+        canvas.height = 2160;
+        map.appendChild(canvas);
+        const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for CPU performance
+        const label = document.getElementById('user-territory-label');
+        const donutMenu = document.getElementById('city-donut-menu');
+
+        function setLoginTab(mode) {
+            const singleTab = document.getElementById('tab-single');
+            const multiTab = document.getElementById('tab-multi');
+            const customTab = document.getElementById('tab-custom');
+            const singlePanel = document.getElementById('single-panel');
+            const multiPanel = document.getElementById('multi-panel');
+            const customPanel = document.getElementById('custom-panel');
+            
+            // Reset all tabs
+            [singleTab, multiTab, customTab].forEach(tab => {
+                tab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400';
+            });
+            [singlePanel, multiPanel, customPanel].forEach(panel => panel.classList.add('hidden'));
+
+            if (mode === 'single') {
+                singleTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg';
+                singlePanel.classList.remove('hidden');
+            } else if (mode === 'multi') {
+                multiTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-purple-600 text-white shadow-lg';
+                multiPanel.classList.remove('hidden');
+            } else if (mode === 'custom') {
+                customTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
+                customPanel.classList.remove('hidden');
+            }
         }
 
-        window.addEventListener('DOMContentLoaded', loadGame);
+        function handlePatternUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Create a small canvas to generate the pattern
+                    const pCanvas = document.createElement('canvas');
+                    const pCtx = pCanvas.getContext('2d');
+                    pCanvas.width = 40; // Pattern tile size
+                    pCanvas.height = 40;
+                    pCtx.drawImage(img, 0, 0, 40, 40);
+                    
+                    // Create pattern from the small canvas
+                    state.customPattern = ctx.createPattern(pCanvas, 'repeat');
+                    
+                    // Update preview
+                    const preview = document.getElementById('pattern-preview');
+                    preview.innerHTML = '';
+                    preview.style.backgroundImage = `url(${pCanvas.toDataURL()})`;
+                    preview.style.backgroundSize = 'cover';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function startGame(mode = 'single') {
+            if (state.initialized) return;
+            if (mode === 'single') {
+                const input = document.getElementById('username-input');
+                if (!input.value.trim()) return;
+                state.username = input.value.trim();
+
+                // Get Settings
+                state.spawnSettings.type = document.getElementById('spawn-type').value;
+                state.spawnSettings.difficulty = document.getElementById('bot-difficulty').value;
+                state.spawnSettings.botCount = Math.min(50, Math.max(1, parseInt(document.getElementById('bot-count').value) || 20));
+
+                // Initialize Entities (0: Wild, 1: Player, 2-N: Bots)
+                state.entities = [
+                    { id: 'WILD', type: 'wild', color: COLORS.LAND },
+                    { id: state.playerId, type: 'player', balance: 1000, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null, collapseThreshold: Math.random() * 0.1 + 0.8, warsWon: 0, damCount: 0, ovcd: 0 }
+                ];
+
+                for (let i = 0; i < state.spawnSettings.botCount; i++) {
+                    const botId = 'tf9' + Math.floor(Math.random() * 90 + 10);
+                    state.entities.push({
+                        id: botId,
+                        type: 'bot',
+                        difficulty: state.spawnSettings.difficulty,
+                        balance: 1000,
+                        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                        name: `BOT ${botId}`,
+                        ownedCount: 0,
+                        cityCount: 0,
+                        capitalPos: null,
+                        collapseThreshold: Math.random() * 0.1 + 0.8,
+                        warsWon: 0,
+                        damCount: 0,
+                        ovcd: 0
+                    });
+                }
+            } else {
+                const user = document.getElementById('multi-username').value.trim();
+                const pass = document.getElementById('multi-password').value.trim();
+                if (!user || !pass) {
+                    alert("Please enter both username and password for multiplayer.");
+                    return;
+                }
+                state.username = user;
+                state.entities = [
+                    { id: 'WILD', type: 'wild', color: COLORS.LAND },
+                    { id: state.playerId, type: 'player', balance: 1000, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null }
+                ];
+            }
+
+            state.initialized = true;
+            document.getElementById('label-name').innerText = state.username.toUpperCase();
+            document.getElementById('login-screen').remove();
+            document.getElementById('ui').classList.remove('hidden');
+            if (state.isPC) document.getElementById('pc-profiler').style.display = 'block';
+            
+            generateWorld();
+            
+            if (mode === 'single' && state.spawnSettings.type === 'selectable') {
+                state.isSelectingSpawn = true;
+                state.intermissionActive = true;
+                state.intermissionTimer = 40;
+                document.getElementById('intermission-hud').classList.remove('hidden');
+                setMode('pan');
+                alert("SELECTABLE SPAWN: Click on any land tile to place your capital. You have 40 seconds before a random location is chosen.");
+            } else {
+                spawnEntities();
+            }
+            
+            startUpdateCheck();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnEntities(playerSx = -1, playerSy = -1) {
+            // Spawn Player
+            if (playerSx !== -1) {
+                spawnCommander(1, playerSx, playerSy);
+            } else {
+                spawnCommander(1);
+            }
+            
+            // Spawn Bots
+            for (let i = 2; i < state.entities.length; i++) {
+                spawnCommander(i);
+            }
+        }
+
+        async function startUpdateCheck() {
+            const check = async () => {
+                try {
+                    const response = await fetch('game.html', { cache: 'no-store' });
+                    const text = await response.text();
+                    // Extract version from the fetched source code
+                    const match = text.match(/version:\s*'([^']+)'/);
+                    if (match && match[1] !== state.version) {
+                        document.getElementById('update-modal').classList.remove('hidden');
+                        return true; // Stop checking once update is found
+                    }
+                } catch (e) {
+                    console.error("Update check failed:", e);
+                }
+                return false;
+            };
+
+            // Check immediately on start
+            if (await check()) return;
+            
+            // Then check periodically
+            const interval = setInterval(async () => {
+                if (await check()) clearInterval(interval);
+            }, CONFIG.UPDATE_CHECK_INTERVAL);
+        }
+
+        const COLORS = {
+            WATER: '#1e3a8a',
+            LAND: '#0f172a',
+            OWNED: '#3b82f6',
+            BRIDGE: '#78350f',
+            DAM: '#06b6d4',
+            CITY: '#f59e0b',
+            CAPITAL: '#ef4444',
+            BUILDING: '#475569'
+        };
+
+        function drawTile(x, y) {
+            const idx = y * CONFIG.COLS + x;
+            const type = state.tileTypes[idx];
+            const flags = state.tileFlags[idx];
+            const ownerIdx = state.tileOwners[idx];
+            let fill = COLORS.LAND;
+            
+            if (type === 0) fill = COLORS.WATER;
+            else if (ownerIdx !== 0) {
+                if (type === 3) fill = COLORS.BRIDGE; // Bridge color
+                else if (type === 4) fill = COLORS.DAM; // Dam water color
+                else fill = state.entities[ownerIdx].color; // Entity territory color
+            }
+            
+            ctx.fillStyle = fill;
+            ctx.fillRect(x * CONFIG.TILE_SIZE, y * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+
+            // Overlay custom pattern for player (ownerIdx 1)
+            if (ownerIdx === 1 && state.customPattern && type >= 2 && type !== 4) {
+                ctx.fillStyle = state.customPattern;
+                ctx.fillRect(x * CONFIG.TILE_SIZE, y * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+            }
+
+            // Bridge details (drawn after pattern to remain visible)
+            if (type === 3) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x * CONFIG.TILE_SIZE + 3, y * CONFIG.TILE_SIZE);
+                ctx.lineTo(x * CONFIG.TILE_SIZE + 3, y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE);
+                ctx.moveTo(x * CONFIG.TILE_SIZE + 7, y * CONFIG.TILE_SIZE);
+                ctx.lineTo(x * CONFIG.TILE_SIZE + 7, y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE);
+                ctx.stroke();
+                ctx.strokeRect(x * CONFIG.TILE_SIZE + 0.5, y * CONFIG.TILE_SIZE + 0.5, CONFIG.TILE_SIZE - 1, CONFIG.TILE_SIZE - 1);
+            }
+
+            // Add ownership indicator for bridges/dams (small colored border or dot)
+            if (ownerIdx !== 0 && (type === 3 || type === 4)) {
+                ctx.fillStyle = state.entities[ownerIdx].color;
+                ctx.fillRect(x * CONFIG.TILE_SIZE + 3, y * CONFIG.TILE_SIZE + 3, CONFIG.TILE_SIZE - 6, CONFIG.TILE_SIZE - 6);
+            }
+
+            // Draw border (rre5) - Only on edges touching different owner or unowned
+             if (flags & 16) { 
+                 const xPos = x * CONFIG.TILE_SIZE;
+                 const yPos = y * CONFIG.TILE_SIZE;
+                 const ts = CONFIG.TILE_SIZE;
+                 const inset = 0.5;
+ 
+                 ctx.beginPath();
+                 // Top
+                 if (y === 0 || state.tileOwners[(y-1) * CONFIG.COLS + x] !== ownerIdx) {
+                     ctx.moveTo(xPos, yPos + inset); ctx.lineTo(xPos + ts, yPos + inset);
+                 }
+                 // Bottom
+                 if (y === CONFIG.ROWS - 1 || state.tileOwners[(y+1) * CONFIG.COLS + x] !== ownerIdx) {
+                     ctx.moveTo(xPos, yPos + ts - inset); ctx.lineTo(xPos + ts, yPos + ts - inset);
+                 }
+                 // Left
+                 if (x === 0 || state.tileOwners[y * CONFIG.COLS + (x-1)] !== ownerIdx) {
+                     ctx.moveTo(xPos + inset, yPos); ctx.lineTo(xPos + inset, yPos + ts);
+                 }
+                 // Right
+                 if (x === CONFIG.COLS - 1 || state.tileOwners[y * CONFIG.COLS + (x+1)] !== ownerIdx) {
+                     ctx.moveTo(xPos + ts - inset, yPos); ctx.lineTo(xPos + ts - inset, yPos + ts);
+                 }
+                 
+                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                 ctx.lineWidth = 2;
+                 ctx.stroke();
+                 
+                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                 ctx.lineWidth = 1;
+                 ctx.stroke();
+             }
+            
+            // Decoration Highlights (Assault Planning)
+            if (state.planning.active && state.planning.turns[state.planning.activeTurn].includes(idx)) {
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; // Red pulse for selection
+                ctx.fillRect(x * CONFIG.TILE_SIZE, y * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 1;
+                ctx.strokeRect(x * CONFIG.TILE_SIZE + 2, y * CONFIG.TILE_SIZE + 2, CONFIG.TILE_SIZE - 4, CONFIG.TILE_SIZE - 4);
+            }
+            
+            // Draw decorations (Emojis)
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const cx = (x + 0.5) * CONFIG.TILE_SIZE;
+            const cy = (y + 0.5) * CONFIG.TILE_SIZE;
+
+            if (flags & 32) { // Dam Icon (One per cluster)
+                ctx.font = '7px Arial'; ctx.fillStyle = 'white'; ctx.fillText('⚡', cx, cy);
+            } else if (type === 5) { // City
+                ctx.font = '8px Arial'; ctx.fillText('🏠', cx, cy);
+            } else if (type === 6) { // Capital
+                ctx.font = '9px Arial'; ctx.fillText('👑', cx, cy);
+            } else if (flags & 1) { // Building
+                ctx.font = '8px Arial'; ctx.fillText('🏗️', cx, cy);
+            }
+        }
+
+        function generateWorld() {
+            ctx.fillStyle = COLORS.LAND;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            for (let y = 0; y < CONFIG.ROWS; y++) {
+                for (let x = 0; x < CONFIG.COLS; x++) {
+                    const idx = y * CONFIG.COLS + x;
+                    const noise = Math.sin(x * 0.1) * Math.cos(y * 0.1);
+                    if (noise > 0.45) {
+                        state.tileTypes[idx] = 0; // Water
+                    } else {
+                        state.tileTypes[idx] = 1; // Land
+                    }
+                    drawTile(x, y);
+                }
+            }
+        }
+
+        function spawnCommander(ownerIdx, forcedSx = -1, forcedSy = -1) {
+            const entity = state.entities[ownerIdx];
+            let sx, sy;
+
+            if (forcedSx !== -1) {
+                sx = forcedSx; sy = forcedSy;
+            } else {
+                let validSpots = [];
+                // Search for a 6x6 area that is entirely wild land
+                for (let i = 0; i < state.tileTypes.length; i++) {
+                    const tsx = i % CONFIG.COLS;
+                    const tsy = Math.floor(i / CONFIG.COLS);
+                    if (tsx + 6 >= CONFIG.COLS || tsy + 6 >= CONFIG.ROWS) continue;
+                    
+                    let isAreaValid = true;
+                    for (let y = 0; y < 6; y++) {
+                        for (let x = 0; x < 6; x++) {
+                            const idx = (tsy + y) * CONFIG.COLS + (tsx + x);
+                            if (state.tileTypes[idx] !== 1 || state.tileOwners[idx] !== 0) {
+                                isAreaValid = false; break;
+                            }
+                        }
+                        if (!isAreaValid) break;
+                    }
+                    if (isAreaValid) validSpots.push(i);
+                }
+
+                if (validSpots.length === 0) {
+                    for (let i = 0; i < state.tileTypes.length; i++) {
+                        if (state.tileTypes[i] === 1 && state.tileOwners[i] === 0) validSpots.push(i);
+                    }
+                }
+                
+                if (validSpots.length === 0) return;
+                const spawnIdx = validSpots[Math.floor(Math.random() * validSpots.length)];
+                sx = spawnIdx % CONFIG.COLS;
+                sy = Math.floor(spawnIdx / CONFIG.COLS);
+            }
+            
+            for (let y = 0; y < 6; y++) {
+                for (let x = 0; x < 6; x++) {
+                    const tx = sx + x;
+                    const ty = sy + y;
+                    const idx = ty * CONFIG.COLS + tx;
+                    if (state.tileTypes[idx] === 0) state.tileTypes[idx] = 1;
+                    claim(tx, ty, true, ownerIdx);
+                    if (x === 3 && y === 3) {
+                        state.tileTypes[idx] = 6;
+                        entity.hasCapital = true;
+                        entity.capitalPos = {x: tx, y: ty};
+                        state.cityIndices.add(idx);
+                        
+                        const capLabel = document.createElement('div');
+                        capLabel.className = ownerIdx === 1 ? 'city-label capital-label' : 'city-label capital-label bot-label';
+                        capLabel.innerText = ownerIdx === 1 ? state.username.toUpperCase() : entity.id;
+                        capLabel.style.left = `${(tx + 0.5) * CONFIG.TILE_SIZE}px`;
+                        capLabel.style.top = `${(ty + 0.5) * CONFIG.TILE_SIZE}px`;
+                        if (ownerIdx !== 1) capLabel.style.borderColor = entity.color;
+                        container.appendChild(capLabel);
+                    }
+                    drawTile(tx, ty);
+                }
+            }
+            if (ownerIdx === 1) centerCameraOn(sx + 3, sy + 3);
+        }
+
+        function claim(x, y, free = false, ownerIdx = 1) {
+            const idx = y * CONFIG.COLS + x;
+            if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
+            
+            const isWater = state.tileTypes[idx] === 0;
+            let currentCost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+            
+            // 100x Price when at war (only for player)
+            if (ownerIdx === 1 && !free) {
+                const activeWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
+                if (activeWar) currentCost *= 100;
+            }
+            
+            // Check if we can afford it (only for player)
+            if (ownerIdx === 1 && !free && state.balance < currentCost) return;
+
+            // Update ownership
+            const oldOwnerIdx = state.tileOwners[idx];
+            state.tileOwners[idx] = ownerIdx;
+
+            // Record Capture for Peace Terms
+            if (oldOwnerIdx !== 0 && oldOwnerIdx !== ownerIdx) {
+                const activeWar = state.wars.find(w => w.active && 
+                    ((w.host === ownerIdx && (w.target === oldOwnerIdx || w.allies.includes(oldOwnerIdx))) ||
+                     (w.target === ownerIdx && w.host === oldOwnerIdx) ||
+                     (w.allies.includes(ownerIdx) && w.target === oldOwnerIdx)));
+                
+                if (activeWar) {
+                    if (ownerIdx === activeWar.host || activeWar.allies.includes(ownerIdx)) {
+                        activeWar.capturedByHost.push({ idx, originalOwner: oldOwnerIdx });
+                    } else if (ownerIdx === activeWar.target) {
+                        activeWar.capturedByTarget.push({ idx, originalOwner: oldOwnerIdx });
+                    }
+                }
+            }
+
+            if (isWater) {
+                state.tileTypes[idx] = 3; // Bridge
+            } else if (state.tileTypes[idx] < 2) {
+                state.tileTypes[idx] = 2; // Claimed land (yu6)
+            }
+
+            // Update stats
+            if (oldOwnerIdx !== 0) state.entities[oldOwnerIdx].ownedCount--;
+            state.entities[ownerIdx].ownedCount++;
+            if (ownerIdx === 1) state.ownedCount++;
+
+            // If player claimed it, update bounds for label
+            if (ownerIdx === 1) {
+                state.bounds.minX = Math.min(state.bounds.minX, x);
+                state.bounds.maxX = Math.max(state.bounds.maxX, x);
+                state.bounds.minY = Math.min(state.bounds.minY, y);
+                state.bounds.maxY = Math.max(state.bounds.maxY, y);
+            }
+
+            // Update borders (rre5)
+            updateTileBorder(x, y);
+            const neighbors = [
+                {x: x-1, y: y}, {x: x+1, y: y}, {x: x, y: y-1}, {x: x, y: y+1}
+            ];
+            neighbors.forEach(n => {
+                if (n.x >= 0 && n.x < CONFIG.COLS && n.y >= 0 && n.y < CONFIG.ROWS) {
+                    if (state.tileOwners[n.y * CONFIG.COLS + n.x] !== 0) {
+                        updateTileBorder(n.x, n.y);
+                    }
+                }
+            });
+
+            if (ownerIdx === 1 && !free) { 
+                state.balance -= currentCost; 
+                state.tileCost += 0.25; 
+                checkForDams(); 
+            }
+            if (ownerIdx === 1) updateLabel();
+        }
+
+        function updateTileBorder(x, y) {
+            const idx = y * CONFIG.COLS + x;
+            const ownerIdx = state.tileOwners[idx];
+            if (ownerIdx === 0) return;
+
+            const neighbors = [
+                {x: x-1, y: y}, {x: x+1, y: y}, {x: x, y: y-1}, {x: x, y: y+1}
+            ];
+            
+            let isBorder = false;
+            for (const n of neighbors) {
+                if (n.x < 0 || n.x >= CONFIG.COLS || n.y < 0 || n.y >= CONFIG.ROWS) {
+                    isBorder = true;
+                    break;
+                }
+                if (state.tileOwners[n.y * CONFIG.COLS + n.x] !== ownerIdx) {
+                    isBorder = true;
+                    break;
+                }
+            }
+
+            if (isBorder) {
+                state.tileFlags[idx] |= 16; // Set rre5 bit
+            } else {
+                state.tileFlags[idx] &= ~16; // Clear rre5 bit
+            }
+            drawTile(x, y);
+        }
+
+        function checkForDams() {
+            let waterIndices = [];
+            for (let i = 0; i < state.tileTypes.length; i++) {
+                if (state.tileTypes[i] === 0 || state.tileTypes[i] === 4) waterIndices.push(i);
+                state.tileFlags[i] &= ~32;
+            }
+            
+            let checked = new Set();
+            let newDams = new Set();
+            let clustersFound = 0;
+
+            for (let idx of waterIndices) {
+                if (checked.has(idx)) continue;
+                let queue = [idx], isEnclosed = true, head = 0, cluster = [];
+                let potentialOwners = new Set();
+                checked.add(idx);
+                
+                while (head < queue.length) {
+                    let curr = queue[head++];
+                    cluster.push(curr);
+                    let cx = curr % CONFIG.COLS, cy = Math.floor(curr / CONFIG.COLS);
+                    const neighbors = [{x: cx-1, y: cy}, {x: cx+1, y: cy}, {x: cx, y: cy-1}, {x: cx, y: cy+1}];
+                    for (let n of neighbors) {
+                        if (n.x < 0 || n.x >= CONFIG.COLS || n.y < 0 || n.y >= CONFIG.ROWS) { isEnclosed = false; continue; }
+                        let nIdx = n.y * CONFIG.COLS + n.x;
+                        const nOwner = state.tileOwners[nIdx];
+                        if (state.tileTypes[nIdx] === 0 || state.tileTypes[nIdx] === 4) {
+                            if (!checked.has(nIdx)) { checked.add(nIdx); queue.push(nIdx); }
+                        } else if (nOwner === 0) { // Unowned land
+                            isEnclosed = false;
+                        } else {
+                            potentialOwners.add(nOwner);
+                        }
+                    }
+                }
+                
+                // Only a dam if fully enclosed by exactly ONE owner
+                if (isEnclosed && potentialOwners.size === 1 && clustersFound < CONFIG.MAX_DAMS) {
+                    const ownerIdx = Array.from(potentialOwners)[0];
+                    clustersFound++;
+                    state.tileFlags[cluster[0]] |= 32;
+                    cluster.forEach(i => {
+                        newDams.add(i);
+                        state.tileOwners[i] = ownerIdx;
+                    });
+                }
+            }
+            
+            // Sync types and redraw only changed tiles
+            state.damIndices.forEach(idx => {
+                if (!newDams.has(idx)) {
+                    state.tileTypes[idx] = 0;
+                    state.tileOwners[idx] = 0; // Revert to unowned water
+                    drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
+                }
+            });
+            
+            newDams.forEach(idx => {
+                if (!state.damIndices.has(idx)) {
+                    state.tileTypes[idx] = 4;
+                    drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
+                } else {
+                    drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
+                }
+            });
+            state.damIndices = newDams;
+            
+            // Update Dam Counts for all entities
+            state.entities.forEach(e => e.damCount = 0);
+            for(let idx of newDams) {
+                const owner = state.tileOwners[idx];
+                if (owner !== 0 && (state.tileFlags[idx] & 32)) {
+                    state.entities[owner].damCount++;
+                }
+            }
+            state.damCount = state.entities[1].damCount;
+        }
+
+        function setMode(m) {
+            state.mode = m;
+            ['paint','pan','city','transport'].forEach(mode => {
+                document.getElementById(`mode-${mode}`).classList.toggle('active-btn', m === mode);
+            });
+            
+            // Show zoom controls only in pan mode
+            const zoomControls = document.getElementById('zoom-controls');
+            if (m === 'pan') zoomControls.classList.remove('hidden');
+            else zoomControls.classList.add('hidden');
+        }
+
+        function changeZoom(step, mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2) {
+            const oldZoom = state.zoom;
+            state.zoom = Math.min(CONFIG.MAX_ZOOM, Math.max(CONFIG.MIN_ZOOM, state.zoom + step));
+            
+            if (oldZoom !== state.zoom) {
+                // Centering logic: adjust pan to keep the point under the mouse fixed
+                const zoomRatio = state.zoom / oldZoom;
+                state.panX = mouseX - (mouseX - state.panX) * zoomRatio;
+                state.panY = mouseY - (mouseY - state.panY) * zoomRatio;
+                
+                document.getElementById('zoom-level').innerText = `${Math.round(state.zoom * 100)}%`;
+                updateTransform();
+            }
+        }
+
+        function updateTransform() {
+            container.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+        }
+
+        function openCityModal(idx) {
+            state.pendingCityIdx = idx;
+            document.getElementById('city-modal').classList.remove('hidden');
+            document.getElementById('city-name-input').focus();
+        }
+
+        function handleInteraction(e) {
+            // Prevent interaction if clicking on UI elements
+            if (e.target.closest('#ui') || e.target.closest('#city-donut-menu') || e.target.closest('.city-label') || 
+                e.target.closest('#diplomacy-modal') || e.target.closest('#aid-modal')) return;
+
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = map.getBoundingClientRect();
+            const x = Math.floor(((touch.clientX - rect.left) / state.zoom) / CONFIG.TILE_SIZE);
+            const y = Math.floor(((touch.clientY - rect.top) / state.zoom) / CONFIG.TILE_SIZE);
+            const idx = y * CONFIG.COLS + x;
+
+            if (state.isPC && x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                document.getElementById('prof-tile').innerText = `${x},${y} (#${idx})`;
+                let statusStr = 'WILD';
+                const ownerIdx = state.tileOwners[idx];
+                const entity = state.entities[ownerIdx];
+
+                if (ownerIdx !== 0) {
+                    statusStr = `${entity.id} | yu6`;
+                    if (entity.type === 'bot') statusStr += ` | ${entity.difficulty}`;
+                    
+                    // War Role Identifiers
+                    const activeWar = state.wars.find(w => w.active && (w.host === ownerIdx || w.target === ownerIdx));
+                    if (activeWar) {
+                        const isPlayerInvolved = (activeWar.host === 1 || activeWar.target === 1);
+                        if (isPlayerInvolved) {
+                            if (ownerIdx === activeWar.host) statusStr += ` | offh${ownerIdx}`;
+                            else statusStr += ` | defh${ownerIdx}`;
+                            
+                            if (ownerIdx === 1) { /* Player */ }
+                            else if (state.alliances.has(`1-${ownerIdx}`) || state.alliances.has(`${ownerIdx}-1`)) statusStr += ` | al${ownerIdx}`;
+                            else statusStr += ` | en${ownerIdx}`;
+                        }
+                    }
+
+                    if (state.tileFlags[idx] & 16) {
+                        statusStr += ' | rre5';
+                        // Check neighbors for shared border ID
+                        const neighbors = [{x:x-1,y:y}, {x:x+1,y:y}, {x:x,y:y-1}, {x:x,y:y+1}];
+                        for (let n of neighbors) {
+                            if (n.x >= 0 && n.x < CONFIG.COLS && n.y >= 0 && n.y < CONFIG.ROWS) {
+                                const nOwnerIdx = state.tileOwners[n.y * CONFIG.COLS + n.x];
+                                if (nOwnerIdx !== 0 && nOwnerIdx !== ownerIdx) {
+                                    const nEntity = state.entities[nOwnerIdx];
+                                    statusStr += ` (${entity.id}-${nEntity.id})`;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (state.tileTypes[idx] === 3) statusStr += ' (BRIDGE)';
+                    else if (state.tileTypes[idx] === 4) statusStr += ' (DAM)';
+                    else if (state.tileTypes[idx] === 5) statusStr += ' (CITY)';
+                    else if (state.tileTypes[idx] === 6) statusStr += ' (CAPITAL)';
+                }
+                
+                document.getElementById('prof-seed').innerText = state.tileTypes[idx];
+                document.getElementById('prof-status').innerText = statusStr;
+            }
+
+            if (!state.isInteracting || x < 0 || x >= CONFIG.COLS || y < 0 || y >= CONFIG.ROWS) return;
+
+            if (state.isSelectingSpawn) {
+                // Check if tile is wild land
+                if (state.tileTypes[idx] === 1 && state.tileOwners[idx] === 0) {
+                    state.isSelectingSpawn = false;
+                    state.intermissionActive = false;
+                    document.getElementById('intermission-hud').classList.add('hidden');
+                    spawnEntities(x - 3, y - 3); // Center 6x6 on click
+                    alert("Capital placed! You can now start building your empire.");
+                } else {
+                    alert("Invalid location! Select a wild land tile.");
+                }
+                return;
+            }
+
+            if (state.mode === 'pan') {
+                state.panX += touch.clientX - state.lastTouchX;
+                state.panY += touch.clientY - state.lastTouchY;
+                updateTransform();
+                closeDonutMenu();
+            } else if (state.planning.active) {
+                // If planning, select tiles for the current turn
+                const ownerIdx = state.tileOwners[idx];
+                const type = state.tileTypes[idx];
+                const war = state.wars.find(w => w.id === state.planning.warId);
+                
+                // Block selecting dam water (type 4) - only allow land, bridges, cities
+                if (ownerIdx === war.target && type !== 4 && !state.planning.turns[state.planning.activeTurn].includes(idx)) {
+                    state.planning.turns[state.planning.activeTurn].push(idx);
+                    updateTurnCount();
+                    drawTile(x, y); // Highlight immediately
+                }
+            } else if (state.mode === 'paint') {
+                closeDonutMenu();
+                // Prevent painting over other owners
+                if (state.tileOwners[idx] !== 0 && state.tileOwners[idx] !== 1) return;
+                
+                const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
+                const hasOwnedNeighbor = neighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
+                if (state.tileOwners[idx] === 0 && hasOwnedNeighbor) claim(x, y, false, 1);
+            } else if (state.mode === 'city') {
+                closeDonutMenu();
+                const ownerIdx = state.tileOwners[idx];
+                const type = state.tileTypes[idx];
+
+                if (ownerIdx === 1 && type === 2) { // Only on owned land
+                    const isTooClose = Array.from(state.cityIndices).some(cityIdx => {
+                        const cx = cityIdx % CONFIG.COLS, cy = Math.floor(cityIdx / CONFIG.COLS);
+                        const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+                        return dist < CONFIG.MIN_CITY_DISTANCE;
+                    });
+                    
+                    if (isTooClose) {
+                        if (state.isPC) document.getElementById('prof-status').innerText = 'TOO CLOSE';
+                        return;
+                    }
+                    
+                    state.isInteracting = false; openCityModal(idx);
+                } else if (ownerIdx !== 0 && ownerIdx !== 1 && type === 6) { // Clicked bot capital
+                    state.isInteracting = false;
+                    openDiplomacy(ownerIdx);
+                } else if (state.cityIndices.has(idx) && ownerIdx === 1) {
+                    openDonutMenu(idx, x, y);
+                }
+            } else if (state.mode === 'transport') {
+                closeDonutMenu();
+                state.isInteracting = false; sendTransport(idx);
+            }
+            state.lastTouchX = touch.clientX; state.lastTouchY = touch.clientY;
+        }
+
+        function openDiplomacy(entityIdx) {
+            state.activeDiploIdx = entityIdx;
+            const entity = state.entities[entityIdx];
+            
+            document.getElementById('diplo-entity-name').innerText = entity.name;
+            document.getElementById('diplo-entity-tiles').innerText = `${entity.ownedCount} Tiles`;
+            document.getElementById('diplo-entity-cities').innerText = `${entity.cityCount} Cities`;
+            
+            const isAlly = state.alliances.has(`1-${entityIdx}`) || state.alliances.has(`${entityIdx}-1`);
+            const statusEl = document.getElementById('diplo-entity-status');
+            statusEl.innerText = isAlly ? 'Status: Ally' : 'Status: Neutral';
+            statusEl.className = isAlly ? 'text-xs text-emerald-400 font-bold uppercase mt-1' : 'text-xs text-slate-500 font-bold uppercase mt-1';
+
+            document.getElementById('btn-propose-alliance').classList.toggle('hidden', isAlly);
+            document.getElementById('btn-send-aid').classList.toggle('hidden', !isAlly);
+            
+            // Check for active war or justification
+            const activeWar = state.wars.find(w => (w.host === 1 && w.target === entityIdx) || (w.host === entityIdx && w.target === 1));
+            const btnWar = document.getElementById('btn-declare-war');
+            const progress = document.getElementById('justification-progress');
+            
+            if (activeWar) {
+                if (activeWar.active) {
+                    statusEl.innerText = 'Status: AT WAR';
+                    statusEl.className = 'text-xs text-red-500 font-bold uppercase mt-1';
+                    btnWar.innerText = '⚔️ AT WAR';
+                    btnWar.disabled = true;
+                    progress.classList.add('hidden');
+                } else {
+                    btnWar.classList.add('hidden');
+                    progress.classList.remove('hidden');
+                }
+            } else {
+                btnWar.classList.remove('hidden');
+                btnWar.innerText = '⚔️ DECLARE WAR';
+                btnWar.disabled = false;
+                progress.classList.add('hidden');
+            }
+
+            document.getElementById('diplomacy-modal').classList.remove('hidden');
+        }
+
+        function closeDiplomacy() {
+            document.getElementById('diplomacy-modal').classList.add('hidden');
+            state.activeDiploIdx = null;
+        }
+
+        function proposeAlliance() {
+            const idx = state.activeDiploIdx;
+            if (!idx) return;
+            
+            // 70% chance of acceptance for easy bots
+            if (Math.random() < 0.7) {
+                state.alliances.add(`1-${idx}`);
+                notify(`Alliance accepted with ${state.entities[idx].name}!`, 'success');
+                openDiplomacy(idx);
+            } else {
+                notify(`${state.entities[idx].name} refused the alliance.`, 'error');
+            }
+        }
+
+        function openAidModal() {
+            document.getElementById('aid-modal').classList.remove('hidden');
+        }
+
+        function closeAidModal() {
+            document.getElementById('aid-modal').classList.add('hidden');
+        }
+
+        function sendAid() {
+            const amount = parseInt(document.getElementById('aid-amount').value);
+            if (isNaN(amount) || amount <= 0 || state.balance < amount) {
+                alert("Invalid amount or insufficient balance.");
+                return;
+            }
+            
+            state.balance -= amount;
+            state.entities[state.activeDiploIdx].balance += amount;
+            alert(`Sent $${amount.toLocaleString()} in aid to ${state.entities[state.activeDiploIdx].name}.`);
+            closeAidModal();
+            updateUI(state.lastMaxBalance);
+        }
+
+        function startJustification() {
+            const targetIdx = state.activeDiploIdx;
+            if (!targetIdx) return;
+            
+            // Check if either entity is already in a war
+            const hostInWar = state.wars.some(w => w.host === 1 || w.target === 1 || w.allies.includes(1));
+            const targetInWar = state.wars.some(w => w.host === targetIdx || w.target === targetIdx || w.allies.includes(targetIdx));
+
+            if (hostInWar) {
+                notify("You are already involved in a war!", "error");
+                return;
+            }
+            if (targetInWar) {
+                notify(`${state.entities[targetIdx].name} is already involved in another war!`, "error");
+                return;
+            }
+
+            const playerTiles = state.entities[1].ownedCount;
+            const enemyTiles = state.entities[targetIdx].ownedCount;
+            const ratio = enemyTiles > 0 ? playerTiles / enemyTiles : 1;
+            const requiredCycles = Math.ceil(5 + ratio);
+            
+            const allies = [];
+            for(let i=2; i<state.entities.length; i++) {
+                if(state.alliances.has(`1-${i}`) || state.alliances.has(`${i}-1`)) {
+                    // Only add if ally is not in another war
+                    const allyInWar = state.wars.some(w => w.host === i || w.target === i || w.allies.includes(i));
+                    if (!allyInWar) allies.push(i);
+                }
+            }
+
+            state.wars.push({
+                id: 'tky' + Math.floor(Math.random() * 900000 + 100000),
+                host: 1,
+                target: targetIdx,
+                allies: allies,
+                justification: 0,
+                requiredCycles: requiredCycles,
+                active: false,
+                losses: { host: { tiles: 0, cities: 0 }, target: { tiles: 0, cities: 0 } },
+                capturedByHost: [], // Array of indices
+                capturedByTarget: [],
+                initialTiles: {
+                    [1]: state.entities[1].ownedCount,
+                    [targetIdx]: state.entities[targetIdx].ownedCount,
+                    ...Object.fromEntries(allies.map(aIdx => [aIdx, state.entities[aIdx].ownedCount]))
+                }
+            });
+            
+            openDiplomacy(targetIdx);
+        }
+
+        function startPlanning(targetIdx) {
+            const war = state.wars.find(w => w.active && ((w.host === 1 && w.target === targetIdx) || (w.host === targetIdx && w.target === 1)));
+            if (!war) {
+                notify("You can only plan assaults on enemies during an active war.", "error");
+                return;
+            }
+
+            state.planning.active = true;
+            state.planning.warId = war.id;
+            state.planning.activeTurn = 0;
+            state.planning.turns = Array.from({length: 10}, () => []);
+            
+            document.getElementById('assault-modal').classList.remove('hidden');
+            document.getElementById('planning-hud').classList.add('hidden');
+            document.getElementById('plan-war-id').innerText = `WAR ID: ${war.id}`;
+            setPlanTurn(0);
+        }
+
+        function setPlanTurn(turnIdx) {
+            if (turnIdx < 0 || turnIdx >= 10) return;
+            state.planning.activeTurn = turnIdx;
+            
+            const turnLabel = `TURN ${turnIdx + 1}`;
+            document.getElementById('current-planning-turn').innerText = turnLabel;
+            document.getElementById('hud-planning-turn').innerText = turnLabel;
+            
+            for(let i=0; i<10; i++) {
+                const btn = document.getElementById(`turn-btn-${i+1}`);
+                btn.className = i === turnIdx ? 'py-2 rounded-xl font-bold text-xs transition-all bg-blue-600 text-white border border-blue-400' : 'py-2 rounded-xl font-bold text-xs transition-all bg-slate-800 text-slate-500 border border-white/5';
+            }
+            updateTurnCount();
+        }
+
+        function updateTurnCount() {
+            const count = state.planning.turns[state.planning.activeTurn].length;
+            const countText = `${count} Tiles Selected`;
+            document.getElementById('turn-tile-count').innerText = countText;
+            document.getElementById('hud-turn-tile-count').innerText = `${count} Tiles`;
+
+            // Calculate Total Plan Cost
+            let totalCost = 0;
+            const activeWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
+            const warMultiplier = activeWar ? 100 : 1;
+            
+            state.planning.turns.forEach(turn => {
+                turn.forEach(idx => {
+                    const isWater = state.tileTypes[idx] === 0;
+                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    totalCost += cost * warMultiplier;
+                });
+            });
+
+            const costLabel = `Total Cost: $${Math.floor(totalCost).toLocaleString()}`;
+            document.getElementById('total-plan-cost').innerText = costLabel;
+            document.getElementById('hud-plan-cost').innerText = `Cost: $${Math.floor(totalCost).toLocaleString()}`;
+
+            // Validate Deploy Button (At least 5 turns with >= 1 tile)
+            const filledTurns = state.planning.turns.filter(t => t.length > 0).length;
+            const deployBtn = document.getElementById('deploy-plan-btn');
+            
+            if (filledTurns >= 5) {
+                deployBtn.disabled = false;
+                deployBtn.className = "flex-1 bg-red-600 py-4 rounded-2xl font-bold text-white uppercase tracking-widest text-[10px] shadow-lg shadow-red-600/20";
+            } else {
+                deployBtn.disabled = true;
+                deployBtn.className = "flex-1 bg-red-600/50 cursor-not-allowed py-4 rounded-2xl font-bold text-white/50 uppercase tracking-widest text-[10px]";
+            }
+        }
+
+        function showAssaultModal() {
+            document.getElementById('assault-modal').classList.remove('hidden');
+            document.getElementById('planning-hud').classList.add('hidden');
+            setMode('pan'); // Stop painting while reviewing
+        }
+
+        function hideAssaultModal() {
+            document.getElementById('assault-modal').classList.add('hidden');
+            document.getElementById('planning-hud').classList.remove('hidden');
+            notify("PLANNING MODE: Click enemy tiles to add to current turn", "info");
+        }
+
+        function cancelPlan() {
+            state.planning.active = false;
+            document.getElementById('assault-modal').classList.add('hidden');
+            document.getElementById('planning-hud').classList.add('hidden');
+        }
+
+        function deployPlan() {
+            const war = state.wars.find(w => w.id === state.planning.warId);
+            if (!war || !war.active) {
+                notify("Assault cannot be deployed. The war has concluded.", "error");
+                cancelPlan();
+                return;
+            }
+
+            const filledTurns = state.planning.turns.filter(t => t.length > 0).length;
+            if (filledTurns < 5) {
+                notify("Assault Plan requires at least 5 turns with selected tiles.", "error");
+                return;
+            }
+
+            // Pre-deployment balance check
+            let totalCost = 0;
+            const warMultiplier = 100; // Always at war if we reach here
+            state.planning.turns.forEach(turn => {
+                turn.forEach(idx => {
+                    const isWater = state.tileTypes[idx] === 0;
+                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    totalCost += cost * warMultiplier;
+                });
+            });
+
+            if (state.balance < totalCost) {
+                notify(`Insufficient funds! Plan cost: $${Math.floor(totalCost).toLocaleString()}`, "error");
+                return;
+            }
+
+            state.planning.active = false;
+            state.assaultInProgress = true;
+            document.getElementById('assault-modal').classList.add('hidden');
+            document.getElementById('planning-hud').classList.add('hidden');
+            
+            // Execute turns sequentially (simulated)
+            let currentTurn = 0;
+            const executeTurn = () => {
+                // Stop if war is no longer active
+                const activeWar = state.wars.find(w => w.id === war.id && w.active);
+                if (!activeWar) {
+                    state.assaultInProgress = false;
+                    return;
+                }
+
+                if (currentTurn >= 10) {
+                    state.assaultInProgress = false;
+                    notify(`Assault plan execution complete`, 'success');
+                    return;
+                }
+                
+                const tiles = state.planning.turns[currentTurn];
+                
+                // Per-turn balance check
+                let turnCost = 0;
+                tiles.forEach(idx => {
+                    const isWater = state.tileTypes[idx] === 0;
+                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    turnCost += cost * warMultiplier;
+                });
+
+                if (state.balance < turnCost) {
+                    state.assaultInProgress = false;
+                    notify("Couldn't complete assault plan due to insufficient funds", "error");
+                    return;
+                }
+
+                tiles.forEach(idx => {
+                    const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                    const oldOwner = state.tileOwners[idx];
+                    const type = state.tileTypes[idx];
+                    
+                    // Claim for player if still owned by enemy (target or ally of target)
+                    if (oldOwner === activeWar.target || activeWar.allies.includes(oldOwner)) {
+                        claim(x, y, true, 1); // free=true because we handle cost here to ensure atomic turn execution
+                        state.balance -= (state.tileTypes[idx] === 3 ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost) * warMultiplier;
+                        
+                        // Track losses
+                        activeWar.losses.target.tiles++;
+                        if (type === 5) activeWar.losses.target.cities++;
+                        if (type === 6) { // Capital conquered
+                            state.entities[oldOwner].hasCapital = false;
+                            state.entities[oldOwner].capitalPos = null;
+                            state.tileTypes[idx] = 2; // Turn into regular land
+                            drawTile(x, y);
+                        }
+                    }
+                });
+                
+                currentTurn++;
+                checkForDams(); 
+                setTimeout(executeTurn, 1000); 
+            };
+            executeTurn();
+        }
+
+        // Add Right Click Event for planning
+        viewport.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = map.getBoundingClientRect();
+            const x = Math.floor(((e.clientX - rect.left) / state.zoom) / CONFIG.TILE_SIZE);
+            const y = Math.floor(((e.clientY - rect.top) / state.zoom) / CONFIG.TILE_SIZE);
+            const idx = y * CONFIG.COLS + x;
+            
+            const ownerIdx = state.tileOwners[idx];
+            if (ownerIdx !== 0 && ownerIdx !== 1) {
+                startPlanning(ownerIdx);
+            }
+        });
+
+        function closeCityModal() { document.getElementById('city-modal').classList.add('hidden'); state.pendingCityIdx = null; }
+
+        function openDonutMenu(idx, x, y) {
+            state.activeDonutIdx = idx;
+            const level = state.cityLevels[idx] || 0;
+            const price = 100 * Math.pow(2, level);
+            
+            document.getElementById('donut-develop-label').innerText = `hj${level}`;
+            document.getElementById('donut-develop-price').innerText = level < 8 ? `$${price.toLocaleString()}` : 'MAX';
+            document.getElementById('donut-develop-count').innerText = level;
+            
+            donutMenu.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
+            donutMenu.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
+            donutMenu.classList.add('active');
+        }
+
+        function closeDonutMenu() {
+            donutMenu.classList.remove('active');
+            state.activeDonutIdx = null;
+        }
+
+        function developCity() {
+            if (state.activeDonutIdx === null) return;
+            const idx = state.activeDonutIdx;
+            const level = state.cityLevels[idx] || 0;
+            if (level >= 8) return;
+            
+            const price = 100 * Math.pow(2, level);
+            if (state.balance < price) return;
+            
+            state.balance -= price;
+            const newLevel = level + 1;
+            state.cityLevels[idx] = newLevel;
+            
+            // Show level-up popup
+            const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+            const p = document.createElement('div');
+            p.className = 'bonus-popup'; p.style.color = '#3b82f6';
+            p.innerText = `LEVEL UP: hj${newLevel}`;
+            p.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
+            p.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
+            container.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+            
+            closeDonutMenu();
+        }
+
+        document.getElementById('donut-develop').onclick = (e) => {
+            e.stopPropagation();
+            developCity();
+        };
+
+        function confirmCityBuild() {
+            const name = document.getElementById('city-name-input').value.trim();
+            if (!name || state.pendingCityIdx === null) return;
+            const idx = state.pendingCityIdx;
+            
+            state.tileFlags[idx] |= 1; // Mark as building
+            state.cityIndices.add(idx);
+            drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
+            
+            closeCityModal();
+            setTimeout(() => {
+                state.tileFlags[idx] &= ~1; // Remove building flag
+                state.tileTypes[idx] = 5; // Change to city
+                state.cityCount++;
+                drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
+                
+                const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                const nameTag = document.createElement('div');
+                nameTag.className = 'city-label'; nameTag.innerText = name;
+                nameTag.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
+                nameTag.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
+                container.appendChild(nameTag);
+            }, CONFIG.CITY_BUILD_TIME);
+        }
+
+        function centerCameraOn(x, y) {
+            state.panX = (window.innerWidth / 2) - (x * CONFIG.TILE_SIZE * state.zoom);
+            state.panY = (window.innerHeight / 2) - (y * CONFIG.TILE_SIZE * state.zoom);
+            updateTransform();
+        }
+
+        function sendTransport(targetIdx) {
+            if (state.balance < CONFIG.TRANSPORT_COST) return;
+            const tx = targetIdx % CONFIG.COLS, ty = Math.floor(targetIdx / CONFIG.COLS);
+            if (state.tileTypes[targetIdx] >= 2 || state.tileTypes[targetIdx] === 0) return;
+            state.balance -= CONFIG.TRANSPORT_COST;
+            const plane = document.createElement('div');
+            plane.className = 'plane'; plane.innerText = '✈️';
+            plane.style.left = `${state.capitalPos.x * CONFIG.TILE_SIZE}px`;
+            plane.style.top = `${state.capitalPos.y * CONFIG.TILE_SIZE}px`;
+            container.appendChild(plane);
+            setTimeout(() => { plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; }, 50);
+            setTimeout(() => { claim(tx, ty, true); plane.remove(); }, 2000);
+        }
+
+        function gameLoop(timestamp) {
+            const delta = timestamp - state.lastFrameTime;
+            state.lastFrameTime = timestamp;
+            state.frameCount++;
+
+            if (timestamp - state.lastFpsUpdate > 1000) {
+                state.fps = Math.round((state.frameCount * 1000) / (timestamp - state.lastFpsUpdate));
+                state.frameCount = 0;
+                state.lastFpsUpdate = timestamp;
+                if (state.isPC) {
+                    document.getElementById('prof-lat').innerText = `${Math.round(delta)}ms`;
+                    document.getElementById('prof-fps').innerText = `${state.fps}fps`;
+                    document.getElementById('prof-ent').innerText = state.ownedCount + state.cityCount;
+                }
+            }
+
+            const now = Date.now();
+            if (now - state.lastTick >= 1000) {
+                state.lastTick = now;
+                
+                // Intermission Timer Countdown
+                if (state.intermissionActive) {
+                    state.intermissionTimer--;
+                    const mins = Math.floor(state.intermissionTimer / 60);
+                    const secs = state.intermissionTimer % 60;
+                    document.getElementById('intermission-timer').innerText = 
+                        `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    
+                    if (state.intermissionTimer <= 0) {
+                         state.intermissionActive = false;
+                         state.isSelectingSpawn = false;
+                         document.getElementById('intermission-hud').classList.add('hidden');
+                         spawnEntities(); // Random spawn fallback
+                         alert("Time's up! Spawning at a random location.");
+                     }
+                 } else {
+                     // Update War Justifications
+                state.wars.forEach(war => {
+                    if (!war.active && war.justification < war.requiredCycles) {
+                        war.justification++;
+                        if (war.justification >= war.requiredCycles) {
+                            war.active = true;
+                            // Update initial tiles at the moment war starts
+                            war.initialTiles[war.host] = state.entities[war.host].ownedCount;
+                            war.initialTiles[war.target] = state.entities[war.target].ownedCount;
+                            war.allies.forEach(aIdx => war.initialTiles[aIdx] = state.entities[aIdx].ownedCount);
+
+                            notify(`WAR DECLARED! ${state.entities[war.host].name} vs ${state.entities[war.target].name}`, 'war');
+                        }
+                        // Update UI if diplomacy modal is open for this target
+                        if (state.activeDiploIdx === war.target) {
+                            const bar = document.getElementById('justification-bar');
+                            const timer = document.getElementById('justification-timer');
+                            if (bar && timer) {
+                                const pct = (war.justification / war.requiredCycles) * 100;
+                                bar.style.width = `${pct}%`;
+                                timer.innerText = `${war.justification}/${war.requiredCycles} Cycles`;
+                            }
+                        }
+                    }
+
+                    // Collapse Check
+                     if (war.active) {
+                         const involved = [war.host, war.target, ...war.allies];
+                         involved.forEach(eIdx => {
+                             const entity = state.entities[eIdx];
+                             if (entity.ownedCount === 0) return; // Already gone
+
+                             const initial = war.initialTiles[eIdx];
+                             if (!initial) return;
+
+                             const threshold = entity.collapseThreshold || 0.85;
+                             
+                             // If they lose more than their threshold (e.g., 85% of their starting land)
+                             if (entity.ownedCount <= initial * (1 - threshold)) {
+                                 collapseEntity(eIdx, war.id);
+                             }
+                         });
+                     }
+                });
+
+                // Max Balance Calculation: Base (Tiles) + 5% Multiplier per City
+                const baseMax = state.ownedCount * CONFIG.VAL_PER_TILE;
+                const cityMultiplier = 1 + (state.cityCount * CONFIG.CITY_MAX_BONUS);
+                
+                // Add city development bonuses (Exponential growth)
+                let devMaxMultiplier = 0;
+                let devBonus = 0;
+                let totalCityLevels = 0;
+                
+                for (const idx of state.cityIndices) {
+                    const level = state.cityLevels[idx] || 0;
+                    totalCityLevels += level;
+                    
+                    if (level > 0) {
+                        // Individual City Multipliers (1.4 growth factor)
+                        const multiplier = (Math.pow(1.4, level) - 1) / (Math.pow(1.4, 8) - 1);
+                        devMaxMultiplier += 0.20 * multiplier;
+                        devBonus += (state.ownedCount * 0.30) * multiplier;
+                    }
+                }
+                
+                const avgLevel = state.cityCount > 0 ? totalCityLevels / state.cityCount : 0;
+                let globalDevBonus = 0;
+                if (avgLevel > 0) {
+                    // Global Average Bonus (1.5 growth factor, up to 50% extra base income)
+                    const globalMultiplier = (Math.pow(1.5, avgLevel) - 1) / (Math.pow(1.5, 8) - 1);
+                    globalDevBonus = (state.ownedCount * 0.50) * globalMultiplier;
+                }
+                
+                const maxBalance = baseMax * (cityMultiplier + devMaxMultiplier);
+                
+                const rate = Math.max(0.01, 0.07 - (0.06/0.69)*((state.balance/maxBalance)-0.01));
+                const income = state.ownedCount + (state.balance * rate) + (state.cityCount * CONFIG.CITY_BONUS) + (state.hasCapital ? CONFIG.CAPITAL_BONUS : 0) + (state.damCount * CONFIG.DAM_BONUS);
+                
+                state.balance = Math.min(maxBalance, state.balance + income + devBonus + globalDevBonus);
+                state.cycleTimer++;
+                if (state.cycleTimer >= CONFIG.CYCLE) {
+                    const bonus = income + (state.ownedCount * 2);
+                    state.balance = Math.min(maxBalance, state.balance + bonus);
+                    state.cycleTimer = 0;
+                    spawnPop(bonus);
+                }
+                updateUI(maxBalance);
+
+                // --- Bot AI & Economy ---
+                for (let i = 2; i < state.entities.length; i++) {
+                    const bot = state.entities[i];
+                    if (bot.ownedCount === 0) continue;
+
+                    // Bot Income
+                    const botBaseMax = bot.ownedCount * CONFIG.VAL_PER_TILE;
+                    const botMaxBalance = botBaseMax * (1 + (bot.cityCount * CONFIG.CITY_MAX_BONUS));
+                    const botRate = Math.max(0.01, 0.07 - (0.06/0.69)*((bot.balance/botMaxBalance)-0.01));
+                    const botIncome = bot.ownedCount + (bot.balance * botRate) + (bot.cityCount * CONFIG.CITY_BONUS) + CONFIG.CAPITAL_BONUS + (bot.damCount * CONFIG.DAM_BONUS);
+                    bot.balance = Math.min(botMaxBalance, bot.balance + botIncome);
+
+                    // Bots expand on cycle 0
+                    if (state.cycleTimer === 0) {
+                        bot.balance = Math.min(botMaxBalance, bot.balance + botIncome + (bot.ownedCount * 2));
+                        
+                        const difficulty = bot.difficulty || 'ez';
+                        let expandCount = 3;
+                        if (difficulty === 'strategic') expandCount = 5;
+                        else if (difficulty === 'hard') expandCount = 8;
+                        else if (difficulty === 'insane') expandCount = 12;
+
+                        const owned = [];
+                        for(let t=0; t<state.tileTypes.length; t++) if(state.tileOwners[t] === i && (state.tileFlags[t] & 16)) owned.push(t);
+                        
+                        if (owned.length > 0) {
+                            for(let e=0; e<expandCount; e++) {
+                                const startIdx = owned[Math.floor(Math.random() * owned.length)];
+                                const sx = startIdx % CONFIG.COLS, sy = Math.floor(startIdx / CONFIG.COLS);
+                                const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+                                const dir = dirs[Math.floor(Math.random() * 4)];
+                                const tx = sx + dir.x, ty = sy + dir.y;
+                                
+                                if (tx >= 0 && tx < CONFIG.COLS && ty >= 0 && ty < CONFIG.ROWS) {
+                                    const tIdx = ty * CONFIG.COLS + tx;
+                                    // Easy/Strategic only claim wild. Hard/Insane can claim anything not protected by alliance/war
+                                    if (state.tileOwners[tIdx] === 0) {
+                                        claim(tx, ty, true, i);
+                                    } else if ((difficulty === 'hard' || difficulty === 'insane') && state.tileOwners[tIdx] !== i) {
+                                        // Simple aggressive expansion for higher difficulties
+                                        const targetOwner = state.tileOwners[tIdx];
+                                        const isWar = state.wars.some(w => w.active && ((w.host === i && w.target === targetOwner) || (w.host === targetOwner && w.target === i)));
+                                        if (isWar) claim(tx, ty, true, i);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Bot Economy: Cities
+                        if (bot.balance >= 1000 && bot.cityCount < 5) {
+                            // Find a random internal owned land tile
+                            const internal = [];
+                            for(let t=0; t<state.tileTypes.length; t++) if(state.tileOwners[t] === i && !(state.tileFlags[t] & 16) && state.tileTypes[t] === 2) internal.push(t);
+                            if (internal.length > 0) {
+                                const cityIdx = internal[Math.floor(Math.random() * internal.length)];
+                                bot.balance -= 1000;
+                                state.tileTypes[cityIdx] = 5;
+                                bot.cityCount++;
+                                state.cityIndices.add(cityIdx);
+                                drawTile(cityIdx % CONFIG.COLS, Math.floor(cityIdx / CONFIG.COLS));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        requestAnimationFrame(gameLoop);
+        }
+
+        function notify(msg, type = 'info') {
+            const container = document.getElementById('notifications');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-900/95 border-blue-500/50 text-blue-400',
+                success: 'bg-slate-900/95 border-emerald-500/50 text-emerald-400',
+                error: 'bg-slate-900/95 border-red-500/50 text-red-400',
+                war: 'bg-red-950/95 border-red-500 text-white animate-pulse'
+            };
+            
+            toast.className = `${colors[type]} px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transform translate-x-full transition-all duration-300 pointer-events-auto cursor-pointer`;
+            toast.innerHTML = `<span>${type === 'war' ? '⚠️' : '🔔'}</span> ${msg}`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+            
+            const remove = () => {
+                toast.style.transform = 'translateX(120%)';
+                setTimeout(() => toast.remove(), 300);
+            };
+            
+            toast.onclick = remove;
+            setTimeout(remove, 5000);
+        }
+
+        function spawnPop(amt) {
+            const p = document.createElement('div');
+            p.className = 'bonus-popup'; p.innerText = `+$${Math.floor(amt)}`;
+            const { minX, maxX, minY, maxY } = state.bounds;
+            p.style.left = `${((minX + maxX + 1) / 2) * CONFIG.TILE_SIZE}px`;
+            p.style.top = `${((minY + maxY + 1) / 2) * CONFIG.TILE_SIZE}px`;
+            container.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+        }
+
+        function updateUI(maxVal) {
+            state.lastMaxBalance = maxVal; // Store for other functions
+            document.getElementById('stat-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
+            document.getElementById('stat-max').innerText = `$${Math.floor(maxVal).toLocaleString()}`;
+            
+            // 100x Cost Indicator during war
+            const activeWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
+            const displayCost = activeWar ? state.tileCost * 100 : state.tileCost;
+            const costEl = document.getElementById('stat-cost');
+            costEl.innerText = `$${Math.floor(displayCost)}`;
+            costEl.className = activeWar ? 'text-red-500 animate-pulse' : '';
+            
+            document.getElementById('stat-city-count').innerText = state.cityCount;
+            document.getElementById('stat-dam-count').innerText = state.damCount;
+            document.getElementById('cycle-timer').innerText = `${state.cycleTimer}.0s`;
+            document.getElementById('cycle-bar').style.width = `${(state.cycleTimer / 10) * 100}%`;
+            document.getElementById('label-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
+
+            // Update War Panel Icon
+            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1));
+            document.getElementById('war-panel-icon').classList.toggle('hidden', !playerActiveWar);
+            if (playerActiveWar) {
+                state.activeWarId = playerActiveWar.id;
+                document.getElementById('war-panel-icon').onclick = () => openWarPanel(playerActiveWar.id);
+            }
+
+            // Update Capital Status
+            const hasCap = state.entities[1].hasCapital;
+            document.getElementById('no-capital-warning').classList.toggle('hidden', hasCap);
+            if (!hasCap) {
+                const cost = 50000 * Math.pow(1.1, state.ownedCount / 100);
+                document.getElementById('btn-rebuild-capital').innerText = `Rebuild ($${Math.floor(cost).toLocaleString()})`;
+            }
+
+            updateLeaderboard();
+        }
+
+        function updateLeaderboard() {
+            const listEl = document.getElementById('leaderboard-list');
+            if (!listEl) return;
+
+            // Update OVCD for all entities
+            state.entities.forEach((entity, eIdx) => {
+                if (eIdx === 0) return; // Skip WILD
+                let totalLevel = 0;
+                let entityCities = 0;
+                state.cityIndices.forEach(idx => {
+                    if (state.tileOwners[idx] === eIdx) {
+                        totalLevel += state.cityLevels[idx] || 0;
+                        entityCities++;
+                    }
+                });
+                entity.ovcd = entityCities > 0 ? (totalLevel / entityCities).toFixed(1) : 0;
+            });
+
+            // Prepare list of entities (excluding WILD)
+            const leaderboardData = state.entities.slice(1).map((e, idx) => {
+                const entityIdx = idx + 1; // Real index in state.entities
+                let value = 0;
+                let suffix = '';
+                const activeWar = state.wars.find(w => w.active && (w.host === entityIdx || w.target === entityIdx || w.allies.includes(entityIdx)));
+                
+                switch (state.leaderboardMode) {
+                    case 'tiles': value = e.ownedCount; suffix = ' Tiles'; break;
+                    case 'ovcd': value = e.ovcd; suffix = ' LVL'; break;
+                    case 'wars': value = e.warsWon; suffix = ' Wins'; break;
+                    case 'cities': value = e.cityCount; suffix = ' Cities'; break;
+                    case 'balance': value = Math.floor(e.balance); suffix = ''; break;
+                    case 'dams': value = e.damCount; suffix = ' Dams'; break;
+                    case 'cost': 
+                        let cost = state.tileCost;
+                        if (activeWar) cost *= 100;
+                        value = Math.floor(cost); suffix = ''; break;
+                }
+                return { name: e.name, color: e.color, value, suffix, id: e.id, isPlayer: e.type === 'player' };
+            });
+
+            // Sort by value descending
+            leaderboardData.sort((a, b) => b.value - a.value);
+
+            // Render
+            listEl.innerHTML = leaderboardData.map((item, index) => `
+                <div class="flex justify-between items-center bg-slate-800/30 p-2 rounded-lg border border-white/5 ${item.isPlayer ? 'ring-1 ring-blue-500/50 bg-blue-500/10' : ''}">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="text-[8px] font-black text-slate-500 w-3">${index + 1}</span>
+                        <div class="w-1.5 h-1.5 rounded-full" style="background-color: ${item.color}"></div>
+                        <span class="text-[9px] font-bold text-white truncate max-w-[80px]">${item.name}</span>
+                    </div>
+                    <div class="text-[9px] font-mono font-black ${item.isPlayer ? 'text-blue-400' : 'text-slate-400'}">
+                        ${state.leaderboardMode === 'balance' || state.leaderboardMode === 'cost' ? '$' : ''}${Number(item.value).toLocaleString()}${item.suffix}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function rebuildCapital() {
+            const cost = 50000 * Math.pow(1.1, state.ownedCount / 100);
+            if (state.balance < cost) {
+                alert("Insufficient balance to rebuild capital.");
+                return;
+            }
+
+            // Find a suitable spot (near center of territory)
+            const owned = [];
+            for(let i=0; i<state.tileTypes.length; i++) if(state.tileOwners[i] === 1 && state.tileTypes[i] === 2) owned.push(i);
+            if(owned.length === 0) { alert("No owned land to build a capital on!"); return; }
+            
+            const idx = owned[Math.floor(owned.length / 2)];
+            state.balance -= cost;
+            state.tileTypes[idx] = 6;
+            state.entities[1].hasCapital = true;
+            state.entities[1].capitalPos = { x: idx % CONFIG.COLS, y: Math.floor(idx / CONFIG.COLS) };
+            
+            // Add label
+            const tx = idx % CONFIG.COLS, ty = Math.floor(idx / CONFIG.COLS);
+            const capLabel = document.createElement('div');
+            capLabel.className = 'city-label capital-label';
+            capLabel.innerText = state.username.toUpperCase();
+            capLabel.style.left = `${(tx + 0.5) * CONFIG.TILE_SIZE}px`;
+            capLabel.style.top = `${(ty + 0.5) * CONFIG.TILE_SIZE}px`;
+            container.appendChild(capLabel);
+            
+            drawTile(tx, ty);
+            updateUI(state.lastMaxBalance);
+            alert("Capital rebuilt!");
+        }
+
+        function openWarPanel(warId) {
+            const war = state.wars.find(w => w.id === warId);
+            if (!war) return;
+
+            const allyList = document.getElementById('war-allies-list');
+            const enemyList = document.getElementById('war-enemies-list');
+            allyList.innerHTML = ''; enemyList.innerHTML = '';
+
+            const hostEntity = state.entities[war.host];
+            const targetEntity = state.entities[war.target];
+
+            const createEntityDiv = (entity, label) => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-slate-800/50 p-3 rounded-xl';
+                div.innerHTML = `<span class="font-bold text-white">${entity.name}</span><span class="text-[10px] text-slate-500 uppercase font-bold">${label}</span>`;
+                return div;
+            };
+
+            if (war.host === 1) {
+                allyList.appendChild(createEntityDiv(hostEntity, 'Host'));
+                war.allies.forEach(aIdx => allyList.appendChild(createEntityDiv(state.entities[aIdx], 'Ally')));
+                enemyList.appendChild(createEntityDiv(targetEntity, 'Target'));
+            } else {
+                allyList.appendChild(createEntityDiv(targetEntity, 'Host')); // If player is target, they are the 'ally' side host
+                enemyList.appendChild(createEntityDiv(hostEntity, 'Target'));
+            }
+
+            document.getElementById('war-ally-losses').innerText = `${war.losses.host.tiles} Tiles | ${war.losses.host.cities} Cities`;
+            document.getElementById('war-enemy-losses').innerText = `${war.losses.target.tiles} Tiles | ${war.losses.target.cities} Cities`;
+
+            document.getElementById('war-panel-modal').classList.remove('hidden');
+        }
+
+        function closeWarPanel() {
+            document.getElementById('war-panel-modal').classList.add('hidden');
+        }
+
+        function proposePeace(type) {
+            const war = state.wars.find(w => w.id === state.activeWarId);
+            if (!war) return;
+
+            const targetIdx = (war.host === 1) ? war.target : war.host;
+            const targetEntity = state.entities[targetIdx];
+
+            // Bot Peace Acceptance Logic
+            const ourLosses = (war.host === 1) ? war.losses.host.tiles : war.losses.target.tiles;
+            const theirLosses = (war.host === 1) ? war.losses.target.tiles : war.losses.host.tiles;
+            
+            let accepted = false;
+            if (type === 'white') {
+                // Bots accept white peace if they are losing or if it's a stalemate
+                if (theirLosses >= ourLosses * 0.8) accepted = true;
+            } else {
+                // End War (Keep Borders): Bots accept if they are losing badly or if they have conquered enough and want to consolidate
+                if (theirLosses > ourLosses * 1.5) accepted = true;
+            }
+
+            if (!accepted) {
+                notify(`${targetEntity.name} refuses your peace terms!`, 'error');
+                return;
+            }
+
+            if (type === 'white') {
+                notify(`WHITE PEACE: Original borders restored`, 'success');
+                
+                // Revert Host Captures
+                war.capturedByHost.forEach(c => {
+                    const x = c.idx % CONFIG.COLS, y = Math.floor(c.idx / CONFIG.COLS);
+                    state.tileOwners[c.idx] = c.originalOwner;
+                    updateTileBorder(x, y);
+                    drawTile(x, y);
+                });
+                
+                // Revert Target Captures
+                war.capturedByTarget.forEach(c => {
+                    const x = c.idx % CONFIG.COLS, y = Math.floor(c.idx / CONFIG.COLS);
+                    state.tileOwners[c.idx] = c.originalOwner;
+                    updateTileBorder(x, y);
+                    drawTile(x, y);
+                });
+
+                checkForDams();
+                endWar(war.id);
+            } else {
+                notify(`Peace accepted: New borders recognized`, 'success');
+                endWar(war.id);
+            }
+        }
+
+        function collapseEntity(eIdx, warId) {
+            const entity = state.entities[eIdx];
+            const war = state.wars.find(w => w.id === warId);
+            if (!war) return;
+
+            notify(`${entity.name} has COLLAPSED due to war exhaustion!`, 'error');
+            
+            // Reclaim all land as WILD
+            for (let i = 0; i < state.tileOwners.length; i++) {
+                if (state.tileOwners[i] === eIdx) {
+                    state.tileOwners[i] = 0; // Wild
+                    // Reset tile types to wild land/water
+                    if (state.tileTypes[i] >= 2 && state.tileTypes[i] !== 3 && state.tileTypes[i] !== 4) {
+                        state.tileTypes[i] = 1; // Land
+                    }
+                    updateTileBorder(i % CONFIG.COLS, Math.floor(i / CONFIG.COLS));
+                    drawTile(i % CONFIG.COLS, Math.floor(i / CONFIG.COLS));
+                }
+            }
+
+            entity.ownedCount = 0;
+            entity.cityCount = 0;
+            entity.hasCapital = false;
+            entity.capitalPos = null;
+
+            // Remove cities from global set
+            const cityIndicesToRemove = [];
+            state.cityIndices.forEach(idx => {
+                if (state.tileOwners[idx] === 0) cityIndicesToRemove.push(idx);
+            });
+            cityIndicesToRemove.forEach(idx => state.cityIndices.delete(idx));
+
+            // If war host or target collapsed, end the war
+            if (eIdx === war.host || eIdx === war.target) {
+                // The surviving side wins
+                if (eIdx === war.host) {
+                    state.entities[war.target].warsWon++;
+                } else {
+                    state.entities[war.host].warsWon++;
+                    war.allies.forEach(aIdx => state.entities[aIdx].warsWon++);
+                }
+                
+                notify(`The war between ${state.entities[war.host].name} and ${state.entities[war.target].name} has ended.`, 'info');
+                endWar(warId);
+            }
+
+            if (eIdx === 1) {
+                alert("GAME OVER: Your empire has collapsed!");
+                location.reload();
+            }
+        }
+
+        function endWar(warId) {
+            state.wars = state.wars.filter(w => w.id !== warId);
+            state.activeWarId = null;
+            closeWarPanel();
+            notify("War has concluded", 'info');
+        }
+
+        function updateLabel() {
+            if (state.ownedCount === 0) return;
+
+            // Find all owned indices
+            const ownedIndices = [];
+            for (let i = 0; i < state.tileTypes.length; i++) {
+                if (state.tileTypes[i] >= 2) ownedIndices.push(i);
+            }
+
+            if (ownedIndices.length === 0) return;
+
+            // Cluster owned tiles to find the biggest bunch
+            let clusters = [];
+            let checked = new Set();
+            
+            for (let idx of ownedIndices) {
+                if (checked.has(idx)) continue;
+                
+                let cluster = [];
+                let queue = [idx];
+                checked.add(idx);
+                
+                while (queue.length > 0) {
+                    let curr = queue.shift();
+                    cluster.push(curr);
+                    
+                    let cx = curr % CONFIG.COLS, cy = Math.floor(curr / CONFIG.COLS);
+                    const neighbors = [
+                        {x: cx-1, y: cy}, {x: cx+1, y: cy}, 
+                        {x: cx, y: cy-1}, {x: cx, y: cy+1}
+                    ];
+                    
+                    for (let n of neighbors) {
+                        if (n.x < 0 || n.x >= CONFIG.COLS || n.y < 0 || n.y >= CONFIG.ROWS) continue;
+                        let nIdx = n.y * CONFIG.COLS + n.x;
+                        if (state.tileTypes[nIdx] >= 2 && !checked.has(nIdx)) {
+                            checked.add(nIdx);
+                            queue.push(nIdx);
+                        }
+                    }
+                }
+                clusters.push(cluster);
+            }
+
+            // Find the largest cluster
+            let largestCluster = clusters.reduce((max, c) => c.length > max.length ? c : max, clusters[0]);
+            
+            // Calculate bounds for the largest cluster only
+            let minX = CONFIG.COLS, maxX = 0, minY = CONFIG.ROWS, maxY = 0;
+            for (let idx of largestCluster) {
+                const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+            }
+
+            label.style.left = `${((minX + maxX + 1) / 2) * CONFIG.TILE_SIZE}px`;
+            label.style.top = `${((minY + maxY + 1) / 2) * CONFIG.TILE_SIZE}px`;
+            label.style.transform = `translate(-50%, -50%)`;
+        }
+
+        const start = (e) => { 
+            state.isInteracting = true; 
+            const touch = e.touches ? e.touches[0] : e;
+            state.lastTouchX = touch.clientX; state.lastTouchY = touch.clientY;
+            handleInteraction(e); 
+        };
+        viewport.addEventListener('mousedown', start);
+        window.addEventListener('mousemove', handleInteraction);
+        window.addEventListener('mouseup', () => state.isInteracting = false);
+        viewport.addEventListener('touchstart', start, {passive: false});
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); handleInteraction(e); }, {passive: false});
+        window.addEventListener('touchend', () => state.isInteracting = false);
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            // Block DevTools Shortcuts
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Ignore if typing in city modal
+            if (!document.getElementById('city-modal').classList.contains('hidden')) return;
+
+            if (e.key === '1') setMode('paint');
+            else if (e.key === '2') setMode('city');
+            else if (e.key === '3') setMode('transport');
+            else if (e.key === '4') setMode('pan');
+            else if (e.key === '+' || e.key === '=') changeZoom(CONFIG.ZOOM_STEP);
+            else if (e.key === '-' || e.key === '_') changeZoom(-CONFIG.ZOOM_STEP);
+        });
+
+        // Disable Right Click
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Basic Anti-Debugging
+        (function() {
+            const block = function() {
+                setInterval(function() {
+                    (function() { return false; }['constructor']('debugger')['call']());
+                }, 50);
+            };
+            try { block(); } catch (err) {}
+        })();
+
+        // Mouse Wheel Zoom for Pan Mode
+        window.addEventListener('wheel', (e) => {
+            if (state.mode === 'pan') {
+                e.preventDefault();
+                const step = e.deltaY > 0 ? -CONFIG.ZOOM_STEP : CONFIG.ZOOM_STEP;
+                changeZoom(step, e.clientX, e.clientY);
+            }
+        }, { passive: false });
     </script>
 </body>
 </html>
