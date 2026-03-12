@@ -731,6 +731,7 @@
             alliances: new Set(), // Set of "owner1-owner2" strings
             
             planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null },
+            botAllyCooldowns: {}, // { entityIdx: timestamp }
             assaultInProgress: false,
             activeWarId: null,
             
@@ -1907,13 +1908,13 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 100;
-                        } else {
-                            baseCost = Infinity; // Out of range
-                        }
-                    }
+                             baseCost = CONFIG.TRANSPORT_COST * 50;
+                         } else {
+                             baseCost = Infinity; // Out of range
+                         }
+                     }
 
-                    totalCost += baseCost * warMultiplier;
+                     totalCost += baseCost * warMultiplier;
                 });
             });
 
@@ -1987,7 +1988,7 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 100;
+                            baseCost = CONFIG.TRANSPORT_COST * 50;
                         } else {
                             outOfRange = true;
                         }
@@ -2046,7 +2047,7 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 100;
+                            baseCost = CONFIG.TRANSPORT_COST * 50;
                         } else {
                             baseCost = Infinity; // Should have been caught by pre-deploy check
                         }
@@ -2077,7 +2078,7 @@
                             const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
 
                             if (dist <= 200) {
-                                actualCost = (CONFIG.TRANSPORT_COST * 100) * warMultiplier;
+                                actualCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
                                 // Air Support Visual
                                 const plane = document.createElement('div');
                                 plane.className = 'plane'; plane.innerText = '🚀';
@@ -2208,17 +2209,27 @@
                     const isBordering = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === war.host || war.allies.includes(state.tileOwners[n])));
 
                     if (!isBordering && cx !== -1) {
-                        // Air Support Visual for Bot
-                        const plane = document.createElement('div');
-                        plane.className = 'plane'; plane.innerText = '🚀';
-                        plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
-                        plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
-                        container.appendChild(plane);
-                        setTimeout(() => { plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; }, 50);
-                        setTimeout(() => plane.remove(), 1000);
+                        const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
+                        if (dist <= 200) {
+                            // Air Support Visual for Bot
+                            const plane = document.createElement('div');
+                            plane.className = 'plane'; plane.innerText = '🚀';
+                            plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                            plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                            container.appendChild(plane);
+                            setTimeout(() => { plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; }, 50);
+                            setTimeout(() => plane.remove(), 1000);
+
+                            // Apply Air Support cost to bot
+                            const cost = (CONFIG.TRANSPORT_COST * 50) * getWarCostMultiplier(war.host);
+                            bot.balance -= cost;
+                        } else {
+                            // Skip tiles out of range for bots too
+                            return;
+                        }
                     }
 
-                    // Bots get free claims during assault
+                    // Bots get free claims during assault (cost already handled above for Air Support)
                     claim(tx, ty, true, war.host);
                     
                     war.losses.target.tiles++;
@@ -2685,20 +2696,27 @@
 
                             if (currentWar.host === i) {
                                 // Bot is host, can invite player
-                                if (!isPlayerInvolved && !playerInAnyWar && (isTeammate || isAlly) && Math.random() < 0.2) {
+                                const now = Date.now();
+                                const cooldown = state.botAllyCooldowns[i] || 0;
+                                if (!isPlayerInvolved && !playerInAnyWar && (isTeammate || isAlly) && (now - cooldown > 30000) && Math.random() < 0.2) {
+                                    state.botAllyCooldowns[i] = now;
                                     const modal = document.getElementById('war-request-modal');
                                     document.getElementById('war-request-title').innerText = "Join War Invitation";
                                     document.getElementById('war-request-msg').innerText = `${bot.name} invites you to join their war against ${state.entities[currentWar.target].name}.`;
                                     modal._requestData = { warId: currentWar.id, requesterIdx: i, type: 'invitation' };
                                     modal.classList.remove('hidden');
                                 }
-                            } else if (!isPlayerInvolved && (isTeammate || isAlly) && Math.random() < 0.2) {
+                            } else if (!isPlayerInvolved && (isTeammate || isAlly)) {
                                 // Bot wants to join PLAYER'S war
-                                const playerWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1)));
-                                if (playerWar && !playerWar.allies.includes(i) && playerWar.target !== i) {
+                                const now = Date.now();
+                                const cooldown = state.botAllyCooldowns[i] || 0;
+                                const playerWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
+                                
+                                if (playerWar && !playerWar.allies.includes(i) && !playerWar.targetAllies.includes(i) && playerWar.target !== i && playerWar.host !== i && (now - cooldown > 30000) && Math.random() < 0.2) {
+                                    state.botAllyCooldowns[i] = now;
                                     const modal = document.getElementById('war-request-modal');
                                     document.getElementById('war-request-title').innerText = "Join War Request";
-                                    document.getElementById('war-request-msg').innerText = `${bot.name} wants to join your war against ${state.entities[playerWar.target].name}.`;
+                                    document.getElementById('war-request-msg').innerText = `${bot.name} wants to join your war against ${state.entities[playerWar.host === 1 || playerWar.allies.includes(1) ? playerWar.target : playerWar.host].name}.`;
                                     modal._requestData = { warId: playerWar.id, requesterIdx: i, type: 'request' };
                                     modal.classList.remove('hidden');
                                 }
