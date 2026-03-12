@@ -122,6 +122,7 @@
             top: 50%;
             transform: translateY(-50%);
             background: rgba(15, 23, 42, 0.9);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             padding: 10px;
             border-radius: 15px;
@@ -832,6 +833,7 @@
             pendingCityIdx: null,
             activeDonutIdx: null,
             launchedMissiles: new Set(), // Track indices being targetted to avoid duplicates
+            activeExplosions: new Set(), // Prevent multiple explosions on same tile
             capitalPos: {x: 0, y: 0},
             bounds: { minX: 384, maxX: 0, minY: 216, maxY: 0 }, // Incremental bounding box
             isPC: !('ontouchstart' in window),
@@ -2205,9 +2207,6 @@
                             rocket.remove();
                             if (type === 5 || type === 6) {
                                 createExplosion(x, y);
-                                const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
-                                explosionSfx.volume = 0.4;
-                                explosionSfx.play().catch(() => {});
                             }
                         }, 1000);
 
@@ -2339,9 +2338,6 @@
                                 rocket.remove();
                                 if (type === 5 || type === 6) {
                                     createExplosion(tx, ty);
-                                    const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
-                                    explosionSfx.volume = 0.3;
-                                    explosionSfx.play().catch(() => {});
                                 }
                             }, 1000);
 
@@ -2365,9 +2361,6 @@
                         // Actually, let's just make sure it's consistent.
                         if (isBordering) {
                             createExplosion(tx, ty);
-                            const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
-                            explosionSfx.volume = 0.3;
-                            explosionSfx.play().catch(() => {});
                         }
 
                         const enemy = state.entities[war.target];
@@ -2563,10 +2556,6 @@
                 if (isWar && (targetType === 5 || targetType === 6)) {
                     // Strategic Strike: "Boom" effect
                     createExplosion(tx, ty);
-                    
-                    const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
-                    explosionSfx.volume = 0.5;
-                    explosionSfx.play().catch(() => {});
 
                     if (targetType === 6) {
                         // Destroy Capital
@@ -2972,14 +2961,26 @@
         }
 
         function createExplosion(x, y) {
+            const idx = Math.floor(y) * CONFIG.COLS + Math.floor(x);
+            if (state.activeExplosions.has(idx)) return; // Prevent double explosions
+            
+            state.activeExplosions.add(idx);
             const explosion = document.createElement('img');
             explosion.src = 'assets/explosion.gif';
             explosion.className = 'explosion-gif';
             explosion.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
             explosion.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
             container.appendChild(explosion);
+            
+            const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
+            explosionSfx.volume = 0.15; // Reduced volume
+            explosionSfx.play().catch(() => {});
+
             // Remove after the GIF finishes (approx 0.92s)
-            setTimeout(() => explosion.remove(), 1000);
+            setTimeout(() => {
+                explosion.remove();
+                state.activeExplosions.delete(idx);
+            }, 1000);
         }
 
         function updateUI(maxVal) {
