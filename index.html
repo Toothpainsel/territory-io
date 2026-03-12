@@ -877,8 +877,29 @@
                 state.entities.push(playerEntity);
 
                 // Add Bots
+                const botNamePool = [
+                    "Xenon", "Nova", "Atlas", "Vortex", "Echo", "Titan", "Luna", "Orion", "Cipher", "Apex",
+                    "Ghost", "Phantom", "Reaper", "Saber", "Viper", "Storm", "Blaze", "Frost", "Shadow", "Rogue",
+                    "Alpha", "Omega", "Delta", "Sigma", "Zeta", "Aegis", "Bastion", "Sentinel", "Warden", "Keeper",
+                    "Vector", "Matrix", "Vertex", "Pixel", "Binary", "Logic", "Cortex", "Neural", "Synapse", "Link",
+                    "Solar", "Stellar", "Cosmos", "Nebula", "Galaxy", "Void", "Abyss", "Zenith", "Horizon", "Edge",
+                    "Raptor", "Falcon", "Eagle", "Hawk", "Wolf", "Tiger", "Lion", "Bear", "Shark", "Orca",
+                    "Blade", "Bolt", "Pulse", "Spark", "Flash", "Turbo", "Nitro", "Gear", "Core", "Flux",
+                    "Onyx", "Jade", "Ruby", "Amber", "Quartz", "Flint", "Steel", "Iron", "Bronze", "Gold",
+                    "Drift", "Shift", "Glide", "Slide", "Jump", "Dash", "Rush", "Snap", "Click", "Tick",
+                    "Zero", "One", "Prime", "Elite", "Grand", "Master", "Lord", "King", "Duke", "Ace"
+                ];
+                const availableBotNames = [...botNamePool];
+
                 for (let i = 2; i < totalEntities; i++) {
                     const botId = 'tf9' + Math.floor(Math.random() * 90 + 10);
+                    
+                    let botName = `BOT ${botId}`;
+                    if (availableBotNames.length > 0) {
+                        const nameIdx = Math.floor(Math.random() * availableBotNames.length);
+                        botName = availableBotNames.splice(nameIdx, 1)[0];
+                    }
+
                     const botEntity = {
                         id: botId,
                         type: 'bot',
@@ -886,7 +907,7 @@
                         balance: 1000,
                         tileCost: 10,
                         color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-                        name: `BOT ${botId}`,
+                        name: botName,
                         ownedCount: 0,
                         cityCount: 0,
                         capitalPos: null,
