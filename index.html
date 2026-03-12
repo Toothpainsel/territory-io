@@ -1600,19 +1600,29 @@
             document.getElementById('diplo-entity-cities').innerText = `${entity.cityCount} Cities`;
             
             const isAlly = state.alliances.has(`1-${entityIdx}`) || state.alliances.has(`${entityIdx}-1`);
+            const isTeammate = entity.teamId !== undefined && entity.teamId === state.entities[1].teamId;
             const statusEl = document.getElementById('diplo-entity-status');
-            statusEl.innerText = isAlly ? 'Status: Ally' : 'Status: Neutral';
-            statusEl.className = isAlly ? 'text-xs text-emerald-400 font-bold uppercase mt-1' : 'text-xs text-slate-500 font-bold uppercase mt-1';
+            
+            if (isTeammate) {
+                statusEl.innerText = 'Status: Teammate';
+                statusEl.className = 'text-xs text-blue-400 font-bold uppercase mt-1';
+            } else {
+                statusEl.innerText = isAlly ? 'Status: Ally' : 'Status: Neutral';
+                statusEl.className = isAlly ? 'text-xs text-emerald-400 font-bold uppercase mt-1' : 'text-xs text-slate-500 font-bold uppercase mt-1';
+            }
 
-            document.getElementById('btn-propose-alliance').classList.toggle('hidden', isAlly);
-            document.getElementById('btn-send-aid').classList.toggle('hidden', !isAlly);
+            document.getElementById('btn-propose-alliance').classList.toggle('hidden', isAlly || isTeammate);
+            document.getElementById('btn-send-aid').classList.toggle('hidden', !(isAlly || isTeammate));
             
             // Check for active war or justification
             const activeWar = state.wars.find(w => (w.host === 1 && w.target === entityIdx) || (w.host === entityIdx && w.target === 1));
             const btnWar = document.getElementById('btn-declare-war');
             const progress = document.getElementById('justification-progress');
             
-            if (activeWar) {
+            if (isTeammate) {
+                btnWar.classList.add('hidden');
+                progress.classList.add('hidden');
+            } else if (activeWar) {
                 if (activeWar.active) {
                     statusEl.innerText = 'Status: AT WAR';
                     statusEl.className = 'text-xs text-red-500 font-bold uppercase mt-1';
@@ -1681,15 +1691,24 @@
             
             if (!targetIdx || hostIdx === targetIdx) return;
             
+            const hostEntity = state.entities[hostIdx];
+            const targetEntity = state.entities[targetIdx];
+            
+            // Prevent declaring war on teammates
+            if (hostEntity.teamId !== undefined && hostEntity.teamId === targetEntity.teamId) {
+                if (!isBotInitiated) notify("You cannot declare war on a teammate!", "error");
+                return;
+            }
+            
             // Check if either entity is already in a war
             const hostInWar = state.wars.some(w => w.host === hostIdx || w.target === hostIdx || w.allies.includes(hostIdx));
             const targetInWar = state.wars.some(w => w.host === targetIdx || w.target === targetIdx || w.allies.includes(targetIdx));
 
-            if (hostInWar || targetInWar) return;
+            if (hostInWar || targetInWar) {
+                if (!isBotInitiated) notify("One of the parties is already involved in a war!", "error");
+                return;
+            }
 
-            const hostEntity = state.entities[hostIdx];
-            const targetEntity = state.entities[targetIdx];
-            
             const hostTiles = hostEntity.ownedCount;
             const enemyTiles = targetEntity.ownedCount;
             const ratio = enemyTiles > 0 ? hostTiles / enemyTiles : 1;
@@ -1698,7 +1717,11 @@
             const allies = [];
             for(let i=1; i<state.entities.length; i++) {
                 if(i === hostIdx || i === targetIdx) continue;
-                if(state.alliances.has(`${Math.min(hostIdx, i)}-${Math.max(hostIdx, i)}`)) {
+                
+                const isTeammate = hostEntity.teamId !== undefined && hostEntity.teamId === state.entities[i].teamId;
+                const isAlly = state.alliances.has(`${Math.min(hostIdx, i)}-${Math.max(hostIdx, i)}`);
+                
+                if(isTeammate || isAlly) {
                     // Only add if ally is not in another war
                     const allyInWar = state.wars.some(w => w.host === i || w.target === i || w.allies.includes(i));
                     if (!allyInWar) allies.push(i);
