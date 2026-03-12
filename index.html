@@ -439,8 +439,41 @@
             </div>
 
             <div class="mt-8 pt-8 border-t border-white/5 flex gap-4">
+                <button id="btn-add-war-ally" onclick="openAddAllyModal()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all">ADD WAR ALLY</button>
                 <button onclick="proposePeace('white')" class="flex-1 bg-slate-800 py-4 rounded-2xl font-bold text-white">WHITE PEACE</button>
                 <button onclick="proposePeace('keep')" class="flex-1 bg-slate-800 py-4 rounded-2xl font-bold text-white">END WAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Ally Modal -->
+    <div id="add-ally-modal" class="hidden fixed inset-0 bg-slate-950/95 z-[700] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white uppercase">Add War Ally</h3>
+                <button onclick="closeAddAllyModal()" class="text-slate-500 hover:text-white">CLOSE</button>
+            </div>
+            <p class="text-xs text-slate-500 mb-4 uppercase font-bold tracking-widest">Select an entity to invite to the war</p>
+            <div id="potential-allies-list" class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-2 mb-6">
+                <!-- Potential allies list will be populated here -->
+            </div>
+            <div class="text-[10px] text-red-500 font-bold uppercase italic">
+                Refusal will break alliances (for non-teammates)
+            </div>
+        </div>
+    </div>
+
+    <!-- Join War Request Modal -->
+    <div id="war-request-modal" class="hidden fixed inset-0 bg-slate-950/95 z-[800] flex items-center justify-center p-6">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm shadow-2xl">
+            <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#ef4444" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40ZM128,192a64,64,0,1,1,64-64A64.07,64.07,0,0,1,128,192Z"></path></svg>
+            </div>
+            <h3 id="war-request-title" class="text-xl font-bold text-white mb-2 uppercase text-center">Join War Request</h3>
+            <p id="war-request-msg" class="text-slate-400 text-sm mb-6 leading-relaxed text-center">ENTITY_NAME wants to join your war against TARGET_NAME.</p>
+            <div class="flex gap-3">
+                <button id="btn-refuse-war-request" onclick="handleWarRequest(false)" class="flex-1 bg-slate-800 py-4 rounded-xl font-bold text-slate-400">REFUSE</button>
+                <button id="btn-accept-war-request" onclick="handleWarRequest(true)" class="flex-1 bg-red-600 py-4 rounded-xl font-bold text-white shadow-lg">ACCEPT</button>
             </div>
         </div>
     </div>
@@ -1622,6 +1655,16 @@
                 const isAllyOfTarget = w.allies.includes(entityIdx) && w.host === 1;
                 return isDirect || isAllyOfHost || isAllyOfTarget;
             });
+
+            // Find if a teammate or ally is at war with this entity
+            const existingWarWithTarget = state.wars.find(w => w.active && (w.host === entityIdx || w.target === entityIdx || w.allies.includes(entityIdx)));
+            const teammateAtWarWithTarget = existingWarWithTarget && (
+                (state.entities[existingWarWithTarget.host].teamId !== undefined && state.entities[existingWarWithTarget.host].teamId === playerEntity.teamId) ||
+                (state.entities[existingWarWithTarget.target].teamId !== undefined && state.entities[existingWarWithTarget.target].teamId === playerEntity.teamId) ||
+                existingWarWithTarget.allies.some(aIdx => state.entities[aIdx].teamId !== undefined && state.entities[aIdx].teamId === playerEntity.teamId) ||
+                state.alliances.has(`1-${existingWarWithTarget.host}`) || state.alliances.has(`${existingWarWithTarget.host}-1`)
+            );
+
             const btnWar = document.getElementById('btn-declare-war');
             const progress = document.getElementById('justification-progress');
             
@@ -1639,11 +1682,20 @@
                     btnWar.classList.add('hidden');
                     progress.classList.remove('hidden');
                 }
+            } else if (teammateAtWarWithTarget && !state.wars.some(w => w.host === 1 || w.target === 1 || w.allies.includes(1))) {
+                // If teammate/ally is at war with this entity and player is NOT in ANY war, show JOIN WAR
+                btnWar.classList.remove('hidden');
+                btnWar.innerText = '🤝 JOIN WAR';
+                btnWar.disabled = false;
+                btnWar.className = 'w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold text-white text-xs uppercase transition-colors';
+                btnWar.onclick = () => requestJoinWar(existingWarWithTarget.id);
+                progress.classList.add('hidden');
             } else {
                 // Check if player is involved in ANY other war
                 const playerInAnyWar = state.wars.some(w => w.host === 1 || w.target === 1 || w.allies.includes(1));
                 
                 btnWar.classList.remove('hidden');
+                btnWar.onclick = () => startJustification(); // Reset to default
                 if (playerInAnyWar) {
                     btnWar.innerText = '⚔️ ALREADY AT WAR';
                     btnWar.disabled = true;
@@ -2331,7 +2383,8 @@
                         }
 
                         // Bot War Declarations (Only if not already at war)
-                        if (state.cycleTimer === 0 && !state.wars.some(w => w.host === i || w.target === i || w.allies.includes(i))) {
+                        const currentWar = state.wars.find(w => w.host === i || w.target === i || w.allies.includes(i));
+                        if (state.cycleTimer === 0 && !currentWar) {
                             // Find potential targets (bordering entities)
                             const potentialTargets = new Set();
                             for (const tIdx of owned) {
@@ -2355,6 +2408,33 @@
                                 const chance = difficulty === 'insane' ? 0.3 : (difficulty === 'hard' ? 0.15 : 0.05);
                                 if (Math.random() < chance) {
                                     startJustification(i, chosenTarget);
+                                }
+                            }
+                        } else if (state.cycleTimer === 0 && currentWar && currentWar.active) {
+                            // Bot is in a war.
+                            const isPlayerInvolved = currentWar.host === 1 || currentWar.target === 1 || currentWar.allies.includes(1);
+                            const playerInAnyWar = state.wars.some(w => w.host === 1 || w.target === 1 || w.allies.includes(1));
+                            const isTeammate = state.entities[1].teamId !== undefined && state.entities[1].teamId === bot.teamId;
+                            const isAlly = state.alliances.has(`1-${i}`) || state.alliances.has(`${i}-1`);
+
+                            if (currentWar.host === i) {
+                                // Bot is host, can invite player
+                                if (!isPlayerInvolved && !playerInAnyWar && (isTeammate || isAlly) && Math.random() < 0.2) {
+                                    const modal = document.getElementById('war-request-modal');
+                                    document.getElementById('war-request-title').innerText = "Join War Invitation";
+                                    document.getElementById('war-request-msg').innerText = `${bot.name} invites you to join their war against ${state.entities[currentWar.target].name}.`;
+                                    modal._requestData = { warId: currentWar.id, requesterIdx: i, type: 'invitation' };
+                                    modal.classList.remove('hidden');
+                                }
+                            } else if (!isPlayerInvolved && (isTeammate || isAlly) && Math.random() < 0.2) {
+                                // Bot wants to join PLAYER'S war
+                                const playerWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1)));
+                                if (playerWar && !playerWar.allies.includes(i) && playerWar.target !== i) {
+                                    const modal = document.getElementById('war-request-modal');
+                                    document.getElementById('war-request-title').innerText = "Join War Request";
+                                    document.getElementById('war-request-msg').innerText = `${bot.name} wants to join your war against ${state.entities[playerWar.target].name}.`;
+                                    modal._requestData = { warId: playerWar.id, requesterIdx: i, type: 'request' };
+                                    modal.classList.remove('hidden');
                                 }
                             }
                         }
@@ -2591,11 +2671,141 @@
             document.getElementById('war-ally-losses').innerText = `${war.losses.host.tiles} Tiles | ${war.losses.host.cities} Cities`;
             document.getElementById('war-enemy-losses').innerText = `${war.losses.target.tiles} Tiles | ${war.losses.target.cities} Cities`;
 
+            // Only show "Add War Ally" if player is in the war
+            const playerInWar = war.host === 1 || war.target === 1 || war.allies.includes(1);
+            document.getElementById('btn-add-war-ally').classList.toggle('hidden', !playerInWar);
+
             document.getElementById('war-panel-modal').classList.remove('hidden');
         }
 
         function closeWarPanel() {
             document.getElementById('war-panel-modal').classList.add('hidden');
+        }
+
+        function openAddAllyModal() {
+            const war = state.wars.find(w => w.id === state.activeWarId);
+            if (!war) return;
+            
+            const listEl = document.getElementById('potential-allies-list');
+            listEl.innerHTML = '';
+            
+            // Host side entities already in the war
+            const alreadyInWar = [war.host, war.target, ...war.allies];
+            
+            // Potential allies: Teammates and Allies who are NOT in any war
+            const potentialAllies = [];
+            for (let i = 1; i < state.entities.length; i++) {
+                if (alreadyInWar.includes(i)) continue;
+                
+                const entity = state.entities[i];
+                if (entity.ownedCount === 0) continue;
+                
+                const isTeammate = state.entities[1].teamId !== undefined && state.entities[1].teamId === entity.teamId;
+                const isAlly = state.alliances.has(`1-${i}`) || state.alliances.has(`${i}-1`);
+                
+                if (isTeammate || isAlly) {
+                    const inWar = state.wars.some(w => w.host === i || w.target === i || w.allies.includes(i));
+                    if (!inWar) potentialAllies.push(i);
+                }
+            }
+            
+            if (potentialAllies.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-slate-500 py-4 text-[10px] uppercase font-bold">No eligible allies available</div>';
+            } else {
+                potentialAllies.forEach(idx => {
+                    const entity = state.entities[idx];
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center bg-slate-800/50 p-3 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors';
+                    div.onclick = () => inviteToWar(idx);
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full" style="background-color: ${entity.color}"></div>
+                            <span class="font-bold text-white text-sm">${entity.name}</span>
+                        </div>
+                        <span class="text-[8px] text-slate-500 uppercase font-bold">${state.entities[1].teamId === entity.teamId ? 'Teammate' : 'Ally'}</span>
+                    `;
+                    listEl.appendChild(div);
+                });
+            }
+            
+            document.getElementById('add-ally-modal').classList.remove('hidden');
+        }
+
+        function closeAddAllyModal() {
+            document.getElementById('add-ally-modal').classList.add('hidden');
+        }
+
+        function inviteToWar(entityIdx) {
+            const war = state.wars.find(w => w.id === state.activeWarId);
+            if (!war) return;
+            
+            const entity = state.entities[entityIdx];
+            closeAddAllyModal();
+            
+            // Bots automatically accept
+            if (entity.type === 'bot') {
+                notify(`${entity.name} has joined your war!`, 'success');
+                addAllyToWar(war.id, entityIdx);
+            } else {
+                // For multiplayer player-to-player, this would send a request
+                // In single player, bots are the only other entities
+                notify(`Request sent to ${entity.name}`, 'info');
+            }
+        }
+
+        function requestJoinWar(warId) {
+            const war = state.wars.find(w => w.id === warId);
+            if (!war) return;
+            
+            const host = state.entities[war.host];
+            if (host.type === 'bot') {
+                // Bots automatically accept player's request to join their war
+                notify(`You have joined ${host.name}'s war!`, 'success');
+                addAllyToWar(warId, 1);
+                closeDiplomacy();
+            } else {
+                // Multiplayer logic: notify host
+            }
+        }
+
+        function handleWarRequest(accepted) {
+            const modal = document.getElementById('war-request-modal');
+            const data = modal._requestData;
+            if (!data) return;
+            
+            if (accepted) {
+                addAllyToWar(data.warId, data.requesterIdx);
+                notify(`${state.entities[data.requesterIdx].name} has joined the war!`, 'success');
+            } else {
+                // Penalty for refusing an INVITATION if not teammate
+                const requester = state.entities[data.requesterIdx];
+                const player = state.entities[1];
+                if (data.type === 'invitation' && (requester.teamId === undefined || requester.teamId !== player.teamId)) {
+                    state.alliances.delete(`${Math.min(1, data.requesterIdx)}-${Math.max(1, data.requesterIdx)}`);
+                    notify(`Alliance broken with ${requester.name} due to refusal!`, 'error');
+                } else {
+                    const msg = data.type === 'invitation' ? `Invitation from ${requester.name} declined.` : `Request from ${requester.name} declined.`;
+                    notify(msg, 'info');
+                }
+            }
+            
+            modal.classList.add('hidden');
+            modal._requestData = null;
+        }
+
+        function addAllyToWar(warId, entityIdx) {
+            const war = state.wars.find(w => w.id === warId);
+            if (!war) return;
+            
+            if (!war.allies.includes(entityIdx)) {
+                war.allies.push(entityIdx);
+                war.initialTiles[entityIdx] = state.entities[entityIdx].ownedCount;
+            }
+            
+            // If War Panel is open, refresh it
+            if (!document.getElementById('war-panel-modal').classList.contains('hidden')) {
+                openWarPanel(warId);
+            }
         }
 
         function proposePeace(type) {
