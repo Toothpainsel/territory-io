@@ -1234,7 +1234,8 @@
                         
                         const capLabel = document.createElement('div');
                         capLabel.className = ownerIdx === 1 ? 'city-label capital-label' : 'city-label capital-label bot-label';
-                        capLabel.innerText = ownerIdx === 1 ? state.username.toUpperCase() : entity.name.toUpperCase();
+                        const nameText = ownerIdx === 1 ? state.username.toUpperCase() : `[BOT] ${entity.name.toUpperCase()}`;
+                        capLabel.innerText = nameText;
                         capLabel.style.left = `${(tx + 0.5) * CONFIG.TILE_SIZE}px`;
                         capLabel.style.top = `${(ty + 0.5) * CONFIG.TILE_SIZE}px`;
                         if (ownerIdx !== 1) capLabel.style.borderColor = entity.color;
@@ -1895,7 +1896,16 @@
                     
                     // If not reachable via border, it uses Air Support (100x transport cost)
                     if (!isReachable) {
-                        baseCost = CONFIG.TRANSPORT_COST * 100;
+                        const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                        const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
+                        const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
+                        const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
+                        
+                        if (dist <= 200) {
+                            baseCost = CONFIG.TRANSPORT_COST * 100;
+                        } else {
+                            baseCost = Infinity; // Out of range
+                        }
                     }
 
                     totalCost += baseCost * warMultiplier;
@@ -1955,6 +1965,8 @@
             let totalCost = 0;
             const warMultiplier = getWarCostMultiplier(1);
             const playerEntity = state.entities[1];
+            let outOfRange = false;
+
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
                     const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
@@ -1964,11 +1976,25 @@
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
                     if (!isReachable) {
-                        baseCost = CONFIG.TRANSPORT_COST * 100;
+                        const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                        const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
+                        const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
+                        const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
+                        
+                        if (dist <= 200) {
+                            baseCost = CONFIG.TRANSPORT_COST * 100;
+                        } else {
+                            outOfRange = true;
+                        }
                     }
                     totalCost += baseCost * warMultiplier;
                 });
             });
+
+            if (outOfRange) {
+                notify("Some tiles are out of Air Support range (200 tiles from Capital)!", "error");
+                return;
+            }
 
             if (state.balance < totalCost) {
                 notify(`Insufficient funds! Plan cost: $${Math.floor(totalCost).toLocaleString()}`, "error");
@@ -2009,7 +2035,16 @@
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
                     if (!isReachable) {
-                        baseCost = CONFIG.TRANSPORT_COST * 100;
+                        const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                        const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
+                        const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
+                        const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
+                        
+                        if (dist <= 200) {
+                            baseCost = CONFIG.TRANSPORT_COST * 100;
+                        } else {
+                            baseCost = Infinity; // Should have been caught by pre-deploy check
+                        }
                     }
                     turnCost += baseCost * warMultiplier;
                 });
@@ -2032,15 +2067,24 @@
                         
                         let actualCost = (state.tileTypes[idx] === 3 ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
                         if (!isReachable) {
-                            actualCost = (CONFIG.TRANSPORT_COST * 100) * warMultiplier;
-                            // Air Support Visual
-                            const plane = document.createElement('div');
-                            plane.className = 'plane'; plane.innerText = '🚀';
-                            plane.style.left = `${state.entities[1].capitalPos.x * CONFIG.TILE_SIZE}px`;
-                            plane.style.top = `${state.entities[1].capitalPos.y * CONFIG.TILE_SIZE}px`;
-                            container.appendChild(plane);
-                            setTimeout(() => { plane.style.left = `${x * CONFIG.TILE_SIZE}px`; plane.style.top = `${y * CONFIG.TILE_SIZE}px`; }, 50);
-                            setTimeout(() => plane.remove(), 1000);
+                            const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
+                            const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
+                            const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
+
+                            if (dist <= 200) {
+                                actualCost = (CONFIG.TRANSPORT_COST * 100) * warMultiplier;
+                                // Air Support Visual
+                                const plane = document.createElement('div');
+                                plane.className = 'plane'; plane.innerText = '🚀';
+                                plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                                plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                                container.appendChild(plane);
+                                setTimeout(() => { plane.style.left = `${x * CONFIG.TILE_SIZE}px`; plane.style.top = `${y * CONFIG.TILE_SIZE}px`; }, 50);
+                                setTimeout(() => plane.remove(), 1000);
+                            } else {
+                                // Skip tiles that are out of range if they somehow made it here
+                                return;
+                            }
                         }
 
                         claim(x, y, true, 1); 
