@@ -461,13 +461,23 @@
                        class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl mb-4 text-white text-center font-bold outline-none focus:border-blue-500 transition-colors">
                 
                 <div class="space-y-4 mb-6">
-                    <div>
-                        <label for="spawn-type" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Spawn Selection</label>
-                        <select id="spawn-type" title="Spawn Selection"
-                                class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
-                            <option value="random">Random Spawn</option>
-                            <option value="selectable">Selectable Spawn</option>
-                        </select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="game-mode" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Game Mode</label>
+                            <select id="game-mode" title="Game Mode" onchange="updateMaxEntities(this.value)"
+                                    class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
+                                <option value="ffa">Free For All</option>
+                                <option value="team">Team Mode</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="spawn-type" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Spawn Type</label>
+                            <select id="spawn-type" title="Spawn Selection"
+                                    class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
+                                <option value="random">Random</option>
+                                <option value="selectable">Selectable</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -482,8 +492,8 @@
                             </select>
                         </div>
                         <div>
-                            <label for="bot-count" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Bot Count</label>
-                            <input type="number" id="bot-count" min="1" max="50" value="20" title="Bot Count"
+                            <label for="bot-count" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2 block">Max Entities (<span id="entity-limit-label">50</span>)</label>
+                            <input type="number" id="bot-count" min="2" max="50" value="20" title="Bot Count"
                                    class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500">
                         </div>
                     </div>
@@ -735,6 +745,15 @@
         const label = document.getElementById('user-territory-label');
         const donutMenu = document.getElementById('city-donut-menu');
 
+        function updateMaxEntities(mode) {
+            const limit = mode === 'team' ? 100 : 50;
+            const input = document.getElementById('bot-count');
+            const label = document.getElementById('entity-limit-label');
+            input.max = limit;
+            label.innerText = limit;
+            if (parseInt(input.value) > limit) input.value = limit;
+        }
+
         function setLoginTab(mode) {
             const singleTab = document.getElementById('tab-single');
             const multiTab = document.getElementById('tab-multi');
@@ -798,19 +817,70 @@
                 state.username = input.value.trim();
 
                 // Get Settings
+                state.gameMode = document.getElementById('game-mode').value;
                 state.spawnSettings.type = document.getElementById('spawn-type').value;
                 state.spawnSettings.difficulty = document.getElementById('bot-difficulty').value;
-                state.spawnSettings.botCount = Math.min(50, Math.max(1, parseInt(document.getElementById('bot-count').value) || 20));
+                
+                const maxEntLimit = state.gameMode === 'team' ? 100 : 50;
+                const totalEntities = Math.min(maxEntLimit, Math.max(2, parseInt(document.getElementById('bot-count').value) || 20));
 
                 // Initialize Entities (0: Wild, 1: Player, 2-N: Bots)
                 state.entities = [
-                    { id: 'WILD', type: 'wild', color: COLORS.LAND },
-                    { id: state.playerId, type: 'player', balance: 1000, tileCost: 10, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null, collapseThreshold: Math.random() * 0.1 + 0.8, warsWon: 0, damCount: 0, ovcd: 0 }
+                    { id: 'WILD', type: 'wild', color: COLORS.LAND }
                 ];
 
-                for (let i = 0; i < state.spawnSettings.botCount; i++) {
+                // Team Setup
+                const teamColors = [
+                    { name: 'Red', base: 0, range: [340, 20] },    // Red/Pink
+                    { name: 'Blue', base: 210, range: [190, 250] }, // Blue/Cyan
+                    { name: 'Green', base: 120, range: [90, 160] }, // Green/Emerald
+                    { name: 'Yellow', base: 50, range: [40, 70] },  // Yellow/Orange
+                    { name: 'Purple', base: 280, range: [260, 310] } // Purple/Magenta
+                ];
+                
+                const teams = [];
+                if (state.gameMode === 'team') {
+                    for(let i=0; i<5; i++) {
+                        teams.push({
+                            id: Math.floor(Math.random() * 900 + 100), // 3-digit unique ID
+                            colorInfo: teamColors[i],
+                            members: []
+                        });
+                    }
+                }
+
+                // Add Player
+                const playerEntity = { 
+                    id: state.playerId, 
+                    type: 'player', 
+                    balance: 1000, 
+                    tileCost: 10, 
+                    color: COLORS.OWNED, 
+                    name: state.username, 
+                    ownedCount: 0, 
+                    cityCount: 0, 
+                    capitalPos: null, 
+                    collapseThreshold: Math.random() * 0.1 + 0.8, 
+                    warsWon: 0, 
+                    damCount: 0, 
+                    ovcd: 0 
+                };
+
+                if (state.gameMode === 'team') {
+                    const tIdx = Math.floor(Math.random() * 5);
+                    const team = teams[tIdx];
+                    const h = team.colorInfo.range[0] + Math.random() * (team.colorInfo.range[1] - team.colorInfo.range[0]);
+                    playerEntity.color = `hsl(${h}, 70%, 50%)`;
+                    playerEntity.teamId = team.id;
+                    playerEntity.name = `t${Math.floor(h)}${team.id} ${state.username}`;
+                    team.members.push(1);
+                }
+                state.entities.push(playerEntity);
+
+                // Add Bots
+                for (let i = 2; i < totalEntities; i++) {
                     const botId = 'tf9' + Math.floor(Math.random() * 90 + 10);
-                    state.entities.push({
+                    const botEntity = {
                         id: botId,
                         type: 'bot',
                         difficulty: state.spawnSettings.difficulty,
@@ -825,6 +895,30 @@
                         warsWon: 0,
                         damCount: 0,
                         ovcd: 0
+                    };
+
+                    if (state.gameMode === 'team') {
+                        const tIdx = Math.floor(Math.random() * 5);
+                        const team = teams[tIdx];
+                        const h = team.colorInfo.range[0] + Math.random() * (team.colorInfo.range[1] - team.colorInfo.range[0]);
+                        botEntity.color = `hsl(${h}, 70%, 50%)`;
+                        botEntity.teamId = team.id;
+                        botEntity.name = `t${Math.floor(h)}${team.id} BOT ${botId}`;
+                        team.members.push(i);
+                    }
+                    state.entities.push(botEntity);
+                }
+
+                // Establish Alliances for Teammates
+                if (state.gameMode === 'team') {
+                    teams.forEach(team => {
+                        for (let i = 0; i < team.members.length; i++) {
+                            for (let j = i + 1; j < team.members.length; j++) {
+                                const m1 = team.members[i];
+                                const m2 = team.members[j];
+                                state.alliances.add(`${Math.min(m1, m2)}-${Math.max(m1, m2)}`);
+                            }
+                        }
                     });
                 }
             } else {
