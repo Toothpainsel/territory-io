@@ -635,7 +635,7 @@
                 <span class="text-white">Tile: <span id="stat-cost">$0</span></span>
                 <span class="text-amber-300">City: <span id="stat-city-count">0</span></span>
                 <span class="text-cyan-400">Dams: <span id="stat-dam-count">0</span></span>
-                <span class="text-purple-400">Transport: $500</span>
+                <span id="stat-transport-wrapper" class="text-purple-400"><span id="stat-transport-label">Transport</span>: <span id="stat-transport-cost">$500</span></span>
             </div>
             
             <div class="flex gap-2 pointer-events-auto">
@@ -2363,9 +2363,9 @@
         }
 
         function sendTransport(targetIdx) {
-            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1)));
+            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
             const isWar = !!playerActiveWar;
-            const cost = isWar ? CONFIG.TRANSPORT_COST * 100 : CONFIG.TRANSPORT_COST;
+            const cost = isWar ? CONFIG.TRANSPORT_COST * 50 : CONFIG.TRANSPORT_COST;
             
             if (state.balance < cost) {
                 notify(`Insufficient balance for ${isWar ? 'Air Support' : 'Transport'}`, 'error');
@@ -2817,8 +2817,24 @@
             document.getElementById('cycle-bar').style.width = `${(state.cycleTimer / 10) * 100}%`;
             document.getElementById('label-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
 
+            // Update Transport/Air Support Indicator
+            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
+            const isWar = !!playerActiveWar;
+            const transportLabel = document.getElementById('stat-transport-label');
+            const transportCost = document.getElementById('stat-transport-cost');
+            const transportWrapper = document.getElementById('stat-transport-wrapper');
+            
+            if (isWar) {
+                transportLabel.innerText = "Air Support";
+                transportCost.innerText = `$${(CONFIG.TRANSPORT_COST * 50).toLocaleString()}`;
+                transportWrapper.className = "text-red-400 animate-pulse";
+            } else {
+                transportLabel.innerText = "Transport";
+                transportCost.innerText = `$${CONFIG.TRANSPORT_COST.toLocaleString()}`;
+                transportWrapper.className = "text-purple-400";
+            }
+
             // Update War Panel Icon
-            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
             document.getElementById('war-panel-icon').classList.toggle('hidden', !playerActiveWar);
             if (playerActiveWar) {
                 state.activeWarId = playerActiveWar.id;
