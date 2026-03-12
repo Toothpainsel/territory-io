@@ -505,18 +505,18 @@
             </div>
 
             <div id="multi-panel" class="hidden">
-                <div class="space-y-3">
+                <form onsubmit="event.preventDefault(); startGame('multi')" class="space-y-3">
                     <label for="multi-username" class="sr-only">Multiplayer Username</label>
                     <input type="text" id="multi-username" placeholder="Username" title="Username" aria-label="Enter multiplayer username"
                            class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl text-white text-center font-bold outline-none focus:border-purple-500 transition-colors">
                     <label for="multi-password" class="sr-only">Multiplayer Password</label>
                     <input type="password" id="multi-password" placeholder="Password" title="Password" aria-label="Enter multiplayer password"
                            class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl text-white text-center font-bold outline-none focus:border-purple-500 transition-colors">
-                    <button onclick="startGame('multi')" class="w-full bg-purple-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform">
+                    <button type="submit" class="w-full bg-purple-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform">
                         LOGIN & SPAWN
                     </button>
                     <p class="text-[9px] text-center text-slate-500 uppercase font-bold">Requires territory.io account</p>
-                </div>
+                </form>
             </div>
 
             <div id="custom-panel" class="hidden">
@@ -2297,7 +2297,7 @@
                                 const targetArr = Array.from(potentialTargets);
                                 const chosenTarget = targetArr[Math.floor(Math.random() * targetArr.length)];
                                 // Higher difficulty = more likely to declare war
-                                const chance = diff === 'insane' ? 0.3 : (diff === 'hard' ? 0.15 : 0.05);
+                                const chance = difficulty === 'insane' ? 0.3 : (difficulty === 'hard' ? 0.15 : 0.05);
                                 if (Math.random() < chance) {
                                     startJustification(i, chosenTarget);
                                 }
