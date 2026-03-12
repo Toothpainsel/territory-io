@@ -805,7 +805,7 @@
                 // Initialize Entities (0: Wild, 1: Player, 2-N: Bots)
                 state.entities = [
                     { id: 'WILD', type: 'wild', color: COLORS.LAND },
-                    { id: state.playerId, type: 'player', balance: 1000, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null, collapseThreshold: Math.random() * 0.1 + 0.8, warsWon: 0, damCount: 0, ovcd: 0 }
+                    { id: state.playerId, type: 'player', balance: 1000, tileCost: 10, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null, collapseThreshold: Math.random() * 0.1 + 0.8, warsWon: 0, damCount: 0, ovcd: 0 }
                 ];
 
                 for (let i = 0; i < state.spawnSettings.botCount; i++) {
@@ -815,6 +815,7 @@
                         type: 'bot',
                         difficulty: state.spawnSettings.difficulty,
                         balance: 1000,
+                        tileCost: 10,
                         color: `hsl(${Math.random() * 360}, 70%, 50%)`,
                         name: `BOT ${botId}`,
                         ownedCount: 0,
@@ -836,7 +837,7 @@
                 state.username = user;
                 state.entities = [
                     { id: 'WILD', type: 'wild', color: COLORS.LAND },
-                    { id: state.playerId, type: 'player', balance: 1000, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null }
+                    { id: state.playerId, type: 'player', balance: 1000, tileCost: 10, color: COLORS.OWNED, name: state.username, ownedCount: 0, cityCount: 0, capitalPos: null }
                 ];
             }
 
@@ -1103,8 +1104,9 @@
             const idx = y * CONFIG.COLS + x;
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
             
+            const entity = state.entities[ownerIdx];
             const isWater = state.tileTypes[idx] === 0;
-            let currentCost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+            let currentCost = isWater ? (entity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : entity.tileCost;
             
             // 100x Price when at war (only for player)
             if (ownerIdx === 1 && !free) {
@@ -1143,8 +1145,11 @@
 
             // Update stats
             if (oldOwnerIdx !== 0) state.entities[oldOwnerIdx].ownedCount--;
-            state.entities[ownerIdx].ownedCount++;
-            if (ownerIdx === 1) state.ownedCount++;
+            entity.ownedCount++;
+            if (ownerIdx === 1) {
+                state.ownedCount++;
+                state.entities[1].ownedCount = state.ownedCount; // Keep in sync
+            }
 
             // If player claimed it, update bounds for label
             if (ownerIdx === 1) {
@@ -1169,8 +1174,13 @@
 
             if (ownerIdx === 1 && !free) { 
                 state.balance -= currentCost; 
-                state.tileCost += 0.25; 
+                state.entities[1].balance = state.balance; // Keep in sync
+                entity.tileCost += 0.25; 
                 checkForDams(); 
+            } else if (ownerIdx !== 1 && !free) {
+                // For bots, subtract from their balance and increment their tileCost
+                entity.balance -= currentCost;
+                entity.tileCost += 0.25;
             }
             if (ownerIdx === 1) updateLabel();
         }
@@ -1630,10 +1640,11 @@
             const activeWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
             const warMultiplier = activeWar ? 100 : 1;
             
+            const playerEntity = state.entities[1];
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
                     const isWater = state.tileTypes[idx] === 0;
-                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    const cost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     totalCost += cost * warMultiplier;
                 });
             });
@@ -1690,10 +1701,11 @@
             // Pre-deployment balance check
             let totalCost = 0;
             const warMultiplier = 100; // Always at war if we reach here
+            const playerEntity = state.entities[1];
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
                     const isWater = state.tileTypes[idx] === 0;
-                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    const cost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     totalCost += cost * warMultiplier;
                 });
             });
@@ -1725,12 +1737,13 @@
                 }
                 
                 const tiles = state.planning.turns[currentTurn];
+                const playerEntity = state.entities[1];
                 
                 // Per-turn balance check
                 let turnCost = 0;
                 tiles.forEach(idx => {
                     const isWater = state.tileTypes[idx] === 0;
-                    const cost = isWater ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost;
+                    const cost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     turnCost += cost * warMultiplier;
                 });
 
@@ -1748,7 +1761,9 @@
                     // Claim for player if still owned by enemy (target or ally of target)
                     if (oldOwner === activeWar.target || activeWar.allies.includes(oldOwner)) {
                         claim(x, y, true, 1); // free=true because we handle cost here to ensure atomic turn execution
-                        state.balance -= (state.tileTypes[idx] === 3 ? (state.tileCost * CONFIG.BRIDGE_MULTIPLIER) : state.tileCost) * warMultiplier;
+                        state.balance -= (state.tileTypes[idx] === 3 ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
+                        state.entities[1].balance = state.balance; // Keep in sync
+                        playerEntity.tileCost += 0.25; // Increment cost per tile in assault
                         
                         // Track losses
                         activeWar.losses.target.tiles++;
@@ -1996,10 +2011,12 @@
                 const income = state.ownedCount + (state.balance * rate) + (state.cityCount * CONFIG.CITY_BONUS) + (state.hasCapital ? CONFIG.CAPITAL_BONUS : 0) + (state.damCount * CONFIG.DAM_BONUS);
                 
                 state.balance = Math.min(maxBalance, state.balance + income + devBonus + globalDevBonus);
+                state.entities[1].balance = state.balance; // Keep in sync
                 state.cycleTimer++;
                 if (state.cycleTimer >= CONFIG.CYCLE) {
                     const bonus = income + (state.ownedCount * 2);
                     state.balance = Math.min(maxBalance, state.balance + bonus);
+                    state.entities[1].balance = state.balance; // Keep in sync
                     state.cycleTimer = 0;
                     spawnPop(bonus);
                 }
@@ -2117,9 +2134,10 @@
             document.getElementById('stat-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
             document.getElementById('stat-max').innerText = `$${Math.floor(maxVal).toLocaleString()}`;
             
-            // 100x Cost Indicator during war
+            // 100x Cost Indicator during war (for player)
+            const playerEntity = state.entities[1];
             const activeWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1)));
-            const displayCost = activeWar ? state.tileCost * 100 : state.tileCost;
+            const displayCost = activeWar ? playerEntity.tileCost * 100 : playerEntity.tileCost;
             const costEl = document.getElementById('stat-cost');
             costEl.innerText = `$${Math.floor(displayCost)}`;
             costEl.className = activeWar ? 'text-red-500 animate-pulse' : '';
@@ -2152,6 +2170,12 @@
         function updateLeaderboard() {
             const listEl = document.getElementById('leaderboard-list');
             if (!listEl) return;
+
+            // Sync player entity with global state for leaderboard accuracy
+            state.entities[1].balance = state.balance;
+            state.entities[1].ownedCount = state.ownedCount;
+            state.entities[1].cityCount = state.cityCount;
+            state.entities[1].damCount = state.damCount;
 
             // Reset OVCD for a fresh calculation pass
             state.entities.forEach(e => e.tempTotalLevel = 0);
@@ -2187,7 +2211,7 @@
                     case 'balance': value = Math.floor(e.balance); suffix = ''; break;
                     case 'dams': value = e.damCount; suffix = ' Dams'; break;
                     case 'cost': 
-                        let cost = state.tileCost;
+                        let cost = e.tileCost;
                         if (activeWar) cost *= 100;
                         value = Math.floor(cost); suffix = ''; break;
                 }
