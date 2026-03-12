@@ -122,7 +122,7 @@
             top: 50%;
             transform: translateY(-50%);
             background: rgba(15, 23, 42, 0.9);
-            backdrop-blur: xl;
+            backdrop-filter: blur(20px);
             padding: 10px;
             border-radius: 15px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -135,7 +135,10 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-[10px] font-bold uppercase tracking-widest;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
         .legend-color {
             width: 10px;
@@ -2211,12 +2214,8 @@
                         // Track losses
                         activeWar.losses.target.tiles++;
                         if (type === 5) activeWar.losses.target.cities++;
-                        if (type === 6) { // Capital conquered
-                            // Boom Effect already handled by rocket timeout if we wanted it here, 
-                            // but let's keep the specific capital destruction logic
-                            createExplosion(x, y);
 
-                            const enemy = state.entities[oldOwner];
+                        if (type === 6) { // Capital conquered
                             enemy.hasCapital = false;
                             enemy.capitalPos = null;
                             enemy.paralyzedCycles = 15;
@@ -2292,7 +2291,7 @@
                 
                 // Pick targets (prioritize cities/capitals for higher difficulties)
                 const batch = [];
-                const sortedTargets = [...targetIndices].sort((a, b) => {
+                const sortedTargets = [...targetIndices].filter(idx => !state.launchedMissiles.has(idx)).sort((a, b) => {
                     const typeA = state.tileTypes[a], typeB = state.tileTypes[b];
                     if (focusOnCities) {
                         if (typeA === 6 || typeB === 6) return typeB === 6 ? 1 : -1;
@@ -2317,6 +2316,7 @@
                         const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
                         if (dist <= 200) {
                             // Air Support Visual for Bot
+                            state.launchedMissiles.add(idx); // Track launch
                             const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
                             const rocket = document.createElement('div');
                             rocket.className = 'plane';
@@ -2335,6 +2335,7 @@
                             }, 50);
                             
                             setTimeout(() => {
+                                state.launchedMissiles.delete(idx); // Clean up
                                 rocket.remove();
                                 if (type === 5 || type === 6) {
                                     createExplosion(tx, ty);
@@ -2359,8 +2360,15 @@
                     war.losses.target.tiles++;
                     if (type === 5) war.losses.target.cities++;
                     if (type === 6) {
-                        // Boom Effect
-                        createExplosion(tx, ty);
+                        // Explosion already handled by rocket timeout if it was an Air Support hit,
+                        // but for bordering hits we might need it? 
+                        // Actually, let's just make sure it's consistent.
+                        if (isBordering) {
+                            createExplosion(tx, ty);
+                            const explosionSfx = new Audio('assets/fx/explosion_sound.mp3');
+                            explosionSfx.volume = 0.3;
+                            explosionSfx.play().catch(() => {});
+                        }
 
                         const enemy = state.entities[war.target];
                         enemy.hasCapital = false;
