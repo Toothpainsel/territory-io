@@ -428,7 +428,6 @@
             <div class="flex gap-2 mb-6">
                 <button id="assault-type-support" onclick="setAssaultType('support')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg">Air Support</button>
                 <button id="assault-type-missile" onclick="setAssaultType('missile')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">War Missile</button>
-                <button id="assault-type-warplane" onclick="setAssaultType('warplane')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Warplane</button>
             </div>
 
             <div class="grid grid-cols-5 gap-2 mb-6">
@@ -704,6 +703,7 @@
                 <span class="text-amber-300">City: <span id="stat-city-count">0</span></span>
                 <span class="text-cyan-400">Dams: <span id="stat-dam-count">0</span></span>
                 <span id="stat-transport-wrapper" class="text-purple-400"><span id="stat-transport-label">Transport</span>: <span id="stat-transport-cost">$500</span></span>
+                <span id="stat-missile-wrapper" class="hidden text-red-500">Missile: <span id="stat-missile-cost">$0</span></span>
             </div>
             
             <div class="flex gap-2 pointer-events-auto">
@@ -718,6 +718,10 @@
                 <button id="mode-transport" onclick="setMode('transport')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Transport Mode" aria-label="Switch to transport mode">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M245.52,118.83l-72.78-43.67a8,8,0,0,0-8.24,0l-29.3,17.58a8,8,0,0,0-3.32,10.15l23,45.92L83.56,190.2,46.1,171.47a8,8,0,0,0-10.74,3.58L22,201.73a8,8,0,0,0,4.61,10.63l44.3,16.61a8,8,0,0,0,8.19-1.92L116,192,238.48,131a8,8,0,0,0,7-12.17Z"></path></svg>
                     <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">3</span>
+                </button>
+                <button id="mode-missile" onclick="setMode('missile')" class="hidden bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="War Missile Mode" aria-label="Switch to war missile mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40ZM128,192a64,64,0,1,1,64-64A64.07,64.07,0,0,1,128,192Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">5</span>
                 </button>
                 <button id="mode-pan" onclick="setMode('pan')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Pan Mode" aria-label="Switch to pan mode">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M200,128a8,8,0,0,1-8,8H136v56a8,8,0,0,1-16,0V136H64a8,8,0,0,1,0-16h56V64a8,8,0,0,1,16,0v56h56A8,8,0,0,1,200,128Z"></path><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"></path></svg>
@@ -1555,8 +1559,9 @@
 
         function setMode(m) {
             state.mode = m;
-            ['paint','pan','city','transport'].forEach(mode => {
-                document.getElementById(`mode-${mode}`).classList.toggle('active-btn', m === mode);
+            ['paint','pan','city','transport','missile'].forEach(mode => {
+                const btn = document.getElementById(`mode-${mode}`);
+                if (btn) btn.classList.toggle('active-btn', m === mode);
             });
             
             // Show zoom controls only in pan mode
@@ -1727,9 +1732,11 @@
                 } else if (state.cityIndices.has(idx) && ownerIdx === 1) {
                     openDonutMenu(idx, x, y);
                 }
-            } else if (state.mode === 'transport') {
+            } else if (state.mode === 'transport' || state.mode === 'missile') {
                 closeDonutMenu();
-                state.isInteracting = false; sendTransport(idx);
+                state.isInteracting = false; 
+                if (state.mode === 'missile') sendWarMissile(idx);
+                else sendTransport(idx);
             }
             state.lastTouchX = touch.clientX; state.lastTouchY = touch.clientY;
         }
@@ -1978,7 +1985,7 @@
 
         function setAssaultType(type) {
             state.planning.assaultType = type;
-            ['support', 'missile', 'warplane'].forEach(t => {
+            ['support', 'missile'].forEach(t => {
                 const btn = document.getElementById(`assault-type-${t}`);
                 if (t === type) {
                     btn.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg';
@@ -2008,12 +2015,13 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    if (state.planning.assaultType === 'warplane') {
+                    if (state.planning.assaultType === 'support') {
+                        // Air Support now uses Warplane logic
                         baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
                     } else if (state.planning.assaultType === 'missile') {
                         baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
                     } else if (!isReachable) {
-                        // Air Support (Rocket)
+                        // Regular border expansion or other
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
                         const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
@@ -2198,7 +2206,7 @@
                         const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
 
-                        if (assaultType === 'warplane') {
+                        if (assaultType === 'support') {
                             actualCost = (playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT) * warMultiplier;
                             executeWarplaneAssault(x, y, cx, cy, idx, activeWar);
                         } else if (assaultType === 'missile') {
@@ -2681,119 +2689,113 @@
         function sendTransport(targetIdx) {
             const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
             const isWar = !!playerActiveWar;
-            const cost = isWar ? CONFIG.TRANSPORT_COST * 50 : CONFIG.TRANSPORT_COST;
             
-            // Fix: Check if a missile is already targetting this tile to avoid spamming
-            if (state.launchedMissiles.has(targetIdx)) return;
+            // If at war, transport button triggers Air Support (Warplane)
+            if (isWar) {
+                const cost = (playerActiveWar.host === 1 || playerActiveWar.allies.includes(1)) ? 
+                             (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1) : 
+                             (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1);
+                
+                if (state.balance < cost) {
+                    notify("Insufficient balance for Air Support (Warplane)!", "error");
+                    return;
+                }
+                
+                const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
+                const tx = targetIdx % CONFIG.COLS, ty = Math.floor(targetIdx / CONFIG.COLS);
+                
+                const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
+                if (dist > 200) {
+                    notify("Target is out of Air Support range!", "error");
+                    return;
+                }
 
+                state.balance -= cost;
+                state.entities[1].balance = state.balance;
+                executeWarplaneAssault(tx, ty, cx, cy, targetIdx, playerActiveWar);
+                return;
+            }
+
+            const cost = CONFIG.TRANSPORT_COST;
+            if (state.launchedMissiles.has(targetIdx)) return;
             if (state.balance < cost) {
-                notify(`Insufficient balance for ${isWar ? 'Air Support' : 'Transport'}`, 'error');
+                notify(`Insufficient balance for Transport`, 'error');
                 return;
             }
 
             // Launch from capital
             if (!state.entities[1].hasCapital) {
-                notify("You must have a capital to launch Air Support/Transport!", "error");
+                notify("You must have a capital to launch Transport!", "error");
+                return;
+            }
+
+            const tx = targetIdx % CONFIG.COLS, ty = Math.floor(targetIdx / CONFIG.COLS);
+            const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
+            const targetType = state.tileTypes[targetIdx];
+            
+            if (targetType >= 2 || targetType === 0) return;
+
+            state.balance -= cost;
+            state.entities[1].balance = state.balance;
+            state.launchedMissiles.add(targetIdx); 
+            
+            const plane = document.createElement('div');
+            plane.className = 'plane'; 
+            const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
+            const displayAngle = angle - 20;
+            
+            plane.innerHTML = `<img src="assets/transport-airplane.gif" class="rocket-img" style="transform: rotate(${displayAngle}deg)">`;
+            plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+            plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+            container.appendChild(plane);
+            
+            const flightTime = 2000;
+            plane.style.transition = 'transform 0.5s ease-out'; 
+            setTimeout(() => {
+                plane.style.transition = `all ${flightTime/1000}s cubic-bezier(0.4, 0, 0.2, 1)`;
+                plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
+                plane.style.top = `${ty * CONFIG.TILE_SIZE}px`;
+            }, 500);
+            
+            setTimeout(() => { 
+                state.launchedMissiles.delete(targetIdx);
+                claim(tx, ty, true, 1); 
+                plane.remove(); 
+            }, 2500);
+        }
+
+        function sendWarMissile(targetIdx) {
+            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
+            if (!playerActiveWar) return;
+
+            const cost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * getWarCostMultiplier(1);
+            
+            if (state.balance < cost) {
+                notify("Insufficient balance for War Missile!", "error");
+                return;
+            }
+
+            if (!state.entities[1].hasCapital) {
+                notify("You must have a capital to launch War Missiles!", "error");
                 return;
             }
 
             const tx = targetIdx % CONFIG.COLS, ty = Math.floor(targetIdx / CONFIG.COLS);
             const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
             
-            // Range check during war
-            if (isWar) {
-                const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
-                if (dist > 200) {
-                    notify("Target is out of Air Support range (Max 200 tiles)!", "error");
-                    return;
-                }
+            const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
+            if (dist > 200) {
+                notify("Target is out of War Missile range!", "error");
+                return;
             }
 
-            // Target check: only wild tiles or enemy strategic targets during war
-            const targetType = state.tileTypes[targetIdx];
             const targetOwner = state.tileOwners[targetIdx];
-            
-            if (!isWar) {
-                if (targetType >= 2 || targetType === 0) return;
-            } else {
-                // In war, can target enemy tiles (except dam water)
-                const isEnemy = targetOwner !== 0 && targetOwner !== 1 && !state.alliances.has(`1-${targetOwner}`) && !state.alliances.has(`${targetOwner}-1`);
-                if (!isEnemy && (targetType >= 2 || targetType === 0)) return;
-                if (targetType === 4) return; // Cannot target dam water
-            }
+            const isEnemy = targetOwner !== 0 && targetOwner !== 1 && !state.alliances.has(`1-${targetOwner}`) && !state.alliances.has(`${targetOwner}-1`);
+            if (!isEnemy && state.tileTypes[targetIdx] !== 0) return;
 
             state.balance -= cost;
             state.entities[1].balance = state.balance;
-            state.launchedMissiles.add(targetIdx); // Mark as launching
-            
-            const plane = document.createElement('div');
-            plane.className = 'plane'; 
-            
-            // Calculate rotation towards target
-            const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
-            
-            // For Airplane (transport), base orientation is 20 deg (up-right)
-            const displayAngle = isWar ? angle : angle - 20;
-            
-            plane.innerHTML = `<img src="${isWar ? 'assets/rocket.gif' : 'assets/transport-airplane.gif'}" class="rocket-img" style="transform: rotate(${displayAngle}deg)">`;
-            plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
-            plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
-            container.appendChild(plane);
-            
-            // Sound Effects
-            if (isWar) {
-                const launchSfx = new Audio('assets/fx/launching-missile.mp3');
-                launchSfx.volume = 0.4;
-                launchSfx.play().catch(() => {});
-            }
-
-            // Airplane Take-off logic
-            const flightTime = 2000;
-            if (!isWar) {
-                plane.style.transition = 'transform 0.5s ease-out'; // Take-off rotation
-                setTimeout(() => {
-                    plane.style.transition = `all ${flightTime/1000}s cubic-bezier(0.4, 0, 0.2, 1)`;
-                    plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
-                    plane.style.top = `${ty * CONFIG.TILE_SIZE}px`;
-                }, 500);
-            } else {
-                setTimeout(() => { 
-                    plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
-                    plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; 
-                }, 50);
-            }
-            
-            setTimeout(() => { 
-                state.launchedMissiles.delete(targetIdx); // Clean up tracking
-
-                if (isWar && (targetType === 5 || targetType === 6)) {
-                    // Strategic Strike: "Boom" effect
-                    createExplosion(tx, ty);
-
-                    if (targetType === 6) {
-                        // Destroy Capital
-                        const enemy = state.entities[targetOwner];
-                        enemy.hasCapital = false;
-                        enemy.capitalPos = null;
-                        enemy.paralyzedCycles = 15; // Paralyzed for 15 cycles
-                        notify(`${enemy.name}'s Capital has been DESTROYED! They are paralyzed!`, 'war', tx, ty);
-                        
-                        // Make it disappear
-                        state.tileTypes[targetIdx] = 2; // Revert to claimed land
-                        // Remove label
-                        const labels = document.querySelectorAll('.capital-label');
-                        labels.forEach(l => {
-                            if (l.innerText === enemy.name.toUpperCase()) l.remove();
-                        });
-                    }
-                } else if (isWar) {
-                    // Regular tile hit but still play explosion visual
-                    createExplosion(tx, ty);
-                }
-                
-                claim(tx, ty, true, 1); 
-                plane.remove(); 
-            }, isWar ? 2000 : 2500);
+            executeWarMissileAssault(tx, ty, cx, cy, targetIdx, playerActiveWar);
         }
 
         function gameLoop(timestamp) {
@@ -3203,6 +3205,9 @@
             
             // 100x Cost Indicator during war (for player)
             const playerEntity = state.entities[1];
+            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
+            const isWar = !!playerActiveWar;
+            
             const warMultiplier = getWarCostMultiplier(1);
             const displayCost = playerEntity.tileCost * warMultiplier;
             const costEl = document.getElementById('stat-cost');
@@ -3216,20 +3221,34 @@
             document.getElementById('label-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
 
             // Update Transport/Air Support Indicator
-            const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
-            const isWar = !!playerActiveWar;
             const transportLabel = document.getElementById('stat-transport-label');
             const transportCost = document.getElementById('stat-transport-cost');
             const transportWrapper = document.getElementById('stat-transport-wrapper');
+            const missileWrapper = document.getElementById('stat-missile-wrapper');
+            const missileCost = document.getElementById('stat-missile-cost');
+            const modeMissileBtn = document.getElementById('mode-missile');
             
             if (isWar) {
                 transportLabel.innerText = "Air Support";
-                transportCost.innerText = `$${(CONFIG.TRANSPORT_COST * 50).toLocaleString()}`;
+                const asCost = (playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT) * warMultiplier;
+                transportCost.innerText = `$${Math.floor(asCost).toLocaleString()}`;
                 transportWrapper.className = "text-red-400 animate-pulse";
+                
+                missileWrapper.classList.remove('hidden');
+                const mCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * warMultiplier;
+                missileCost.innerText = `$${Math.floor(mCost).toLocaleString()}`;
+                
+                if (modeMissileBtn) modeMissileBtn.classList.remove('hidden');
             } else {
                 transportLabel.innerText = "Transport";
                 transportCost.innerText = `$${CONFIG.TRANSPORT_COST.toLocaleString()}`;
                 transportWrapper.className = "text-purple-400";
+                
+                missileWrapper.classList.add('hidden');
+                if (modeMissileBtn) {
+                    modeMissileBtn.classList.add('hidden');
+                    if (state.mode === 'missile') setMode('pan');
+                }
             }
 
             // Update Team Pie Chart
@@ -3984,6 +4003,10 @@
             else if (e.key === '2') setMode('city');
             else if (e.key === '3') setMode('transport');
             else if (e.key === '4') setMode('pan');
+            else if (e.key === '5') {
+                const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
+                if (playerActiveWar) setMode('missile');
+            }
             else if (e.key === '+' || e.key === '=') changeZoom(CONFIG.ZOOM_STEP);
             else if (e.key === '-' || e.key === '_') changeZoom(-CONFIG.ZOOM_STEP);
         });
