@@ -976,7 +976,7 @@
                 const playerEntity = { 
                     id: state.playerId, 
                     type: 'player', 
-                    balance: 1000, 
+                    balance: state.username.includes('INF-VALUE') ? Infinity : 1000, 
                     tileCost: 10, 
                     color: COLORS.OWNED, 
                     name: state.username, 
@@ -988,6 +988,10 @@
                     damCount: 0, 
                     ovcd: 0 
                 };
+
+                if (state.username.includes('INF-VALUE')) {
+                    state.balance = Infinity;
+                }
 
                 if (state.gameMode === 'team') {
                     document.getElementById('team-pie-container').style.display = 'block';
@@ -2930,7 +2934,9 @@
                 const rate = Math.max(0.01, 0.07 - (0.06/0.69)*((state.balance/maxBalance)-0.01));
                 const income = state.ownedCount + (state.balance * rate) + (state.cityCount * CONFIG.CITY_BONUS) + (state.hasCapital ? CONFIG.CAPITAL_BONUS : 0) + (state.damCount * CONFIG.DAM_BONUS);
                 
-                state.balance = Math.min(maxBalance, state.balance + income + devBonus + globalDevBonus);
+                if (state.balance !== Infinity) {
+                    state.balance = Math.min(maxBalance, state.balance + income + devBonus + globalDevBonus);
+                }
                 state.entities[1].balance = state.balance; // Keep in sync
                 state.cycleTimer++;
 
@@ -2942,7 +2948,9 @@
 
                 if (state.cycleTimer >= CONFIG.CYCLE) {
                     const bonus = income + (state.ownedCount * 2);
-                    state.balance = Math.min(maxBalance, state.balance + bonus);
+                    if (state.balance !== Infinity) {
+                        state.balance = Math.min(maxBalance, state.balance + bonus);
+                    }
                     state.entities[1].balance = state.balance; // Keep in sync
                     state.cycleTimer = 0;
                     spawnPop(bonus);
@@ -3200,8 +3208,8 @@
 
         function updateUI(maxVal) {
             state.lastMaxBalance = maxVal; // Store for other functions
-            document.getElementById('stat-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
-            document.getElementById('stat-max').innerText = `$${Math.floor(maxVal).toLocaleString()}`;
+            document.getElementById('stat-balance').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(state.balance).toLocaleString()}`;
+            document.getElementById('stat-max').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(maxVal).toLocaleString()}`;
             
             // 100x Cost Indicator during war (for player)
             const playerEntity = state.entities[1];
@@ -3218,7 +3226,7 @@
             document.getElementById('stat-dam-count').innerText = state.damCount;
             document.getElementById('cycle-timer').innerText = `${state.cycleTimer}.0s`;
             document.getElementById('cycle-bar').style.width = `${(state.cycleTimer / 10) * 100}%`;
-            document.getElementById('label-balance').innerText = `$${Math.floor(state.balance).toLocaleString()}`;
+            document.getElementById('label-balance').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(state.balance).toLocaleString()}`;
 
             // Update Transport/Air Support Indicator
             const transportLabel = document.getElementById('stat-transport-label');
@@ -3315,13 +3323,15 @@
                     case 'ovcd': value = e.ovcd; suffix = ' LVL'; break;
                     case 'wars': value = e.warsWon; suffix = ' Wins'; break;
                     case 'cities': value = e.cityCount; suffix = ' Cities'; break;
-                    case 'balance': value = Math.floor(e.balance); suffix = ''; break;
+                    case 'balance': 
+                        value = e.balance === Infinity ? 'inf' : Math.floor(e.balance); 
+                        suffix = ''; break;
                     case 'dams': value = e.damCount; suffix = ' Dams'; break;
                     case 'cost': 
                         let cost = e.tileCost * getWarCostMultiplier(entityIdx);
                         value = Math.floor(cost); suffix = ''; break;
                 }
-                return { name: e.name, color: e.color, value: Number(value), suffix, id: e.id, isPlayer: e.type === 'player', ownedCount: e.ownedCount };
+                return { name: e.name, color: e.color, value: value, suffix, id: e.id, isPlayer: e.type === 'player', ownedCount: e.ownedCount };
             });
 
             // Find the leader by territory size (ownedCount)
@@ -3331,11 +3341,16 @@
             });
 
             // Sort by value descending
-            leaderboardData.sort((a, b) => b.value - a.value);
+            leaderboardData.sort((a, b) => {
+                if (a.value === 'inf') return -1;
+                if (b.value === 'inf') return 1;
+                return b.value - a.value;
+            });
 
             // Render
             listEl.innerHTML = leaderboardData.map((item, index) => {
                 const isLeader = maxTiles > 0 && item.ownedCount === maxTiles;
+                const displayValue = item.value === 'inf' ? 'inf' : Number(item.value).toLocaleString();
                 return `
                 <div class="flex justify-between items-center bg-slate-800/30 p-2 rounded-lg border border-white/5 ${item.isPlayer ? 'ring-1 ring-blue-500/50 bg-blue-500/10' : ''}">
                     <div class="flex items-center gap-2 overflow-hidden">
@@ -3344,7 +3359,7 @@
                         <span class="text-[9px] font-bold text-white truncate max-w-[80px]">${item.name} ${isLeader ? '👑' : ''}</span>
                     </div>
                     <div class="text-[9px] font-mono font-black ${item.isPlayer ? 'text-blue-400' : 'text-slate-400'}">
-                        ${state.leaderboardMode === 'balance' || state.leaderboardMode === 'cost' ? '$' : ''}${Number(item.value).toLocaleString()}${item.suffix}
+                        ${state.leaderboardMode === 'balance' || state.leaderboardMode === 'cost' ? '$' : ''}${displayValue}${item.suffix}
                     </div>
                 </div>
             `;}).join('');
