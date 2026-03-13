@@ -424,6 +424,13 @@
                 <div id="plan-war-id" class="text-[10px] text-red-500 font-mono font-bold px-2 py-1 bg-red-500/10 rounded border border-red-500/20">WAR ID: ---</div>
             </div>
 
+            <!-- Assault Type Selection -->
+            <div class="flex gap-2 mb-6">
+                <button id="assault-type-support" onclick="setAssaultType('support')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg">Air Support</button>
+                <button id="assault-type-missile" onclick="setAssaultType('missile')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">War Missile</button>
+                <button id="assault-type-warplane" onclick="setAssaultType('warplane')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Warplane</button>
+            </div>
+
             <div class="grid grid-cols-5 gap-2 mb-6">
                 <!-- Turn Buttons -->
                 <script>
@@ -780,7 +787,9 @@
             UPDATE_CHECK_INTERVAL: 60000, // Check every 60 seconds
             MIN_ZOOM: 0.2,
             MAX_ZOOM: 3.0,
-            ZOOM_STEP: 0.2
+            ZOOM_STEP: 0.2,
+            WAR_MISSILE_COST_MULT: 2,
+            WARPLANE_COST_MULT: 6
         };
 
         const state = {
@@ -804,7 +813,7 @@
             wars: [], // Active wars: { id: 'tky??????', host: 1, target: 2, justification: 0, active: false, ... }
             alliances: new Set(), // Set of "owner1-owner2" strings
             
-            planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null },
+            planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null, assaultType: 'support' },
             botAllyCooldowns: {}, // { entityIdx: timestamp }
             assaultInProgress: false,
             activeWarId: null,
@@ -1967,6 +1976,19 @@
             updateTurnCount();
         }
 
+        function setAssaultType(type) {
+            state.planning.assaultType = type;
+            ['support', 'missile', 'warplane'].forEach(t => {
+                const btn = document.getElementById(`assault-type-${t}`);
+                if (t === type) {
+                    btn.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg';
+                } else {
+                    btn.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400';
+                }
+            });
+            updateTurnCount();
+        }
+
         function updateTurnCount() {
             const count = state.planning.turns[state.planning.activeTurn].length;
             const countText = `${count} Tiles Selected`;
@@ -1976,8 +1998,8 @@
             // Calculate Total Plan Cost
             let totalCost = 0;
             const warMultiplier = getWarCostMultiplier(1);
-            
             const playerEntity = state.entities[1];
+            
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
                     const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
@@ -1986,21 +2008,25 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    // If not reachable via border, it uses Air Support (100x transport cost)
-                    if (!isReachable) {
+                    if (state.planning.assaultType === 'warplane') {
+                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                    } else if (state.planning.assaultType === 'missile') {
+                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                    } else if (!isReachable) {
+                        // Air Support (Rocket)
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
                         const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                             baseCost = CONFIG.TRANSPORT_COST * 50;
-                         } else {
-                             baseCost = Infinity; // Out of range
-                         }
-                     }
+                            baseCost = CONFIG.TRANSPORT_COST * 50;
+                        } else {
+                            baseCost = Infinity;
+                        }
+                    }
 
-                     totalCost += baseCost * warMultiplier;
+                    totalCost += baseCost * warMultiplier;
                 });
             });
 
@@ -2058,6 +2084,7 @@
             const warMultiplier = getWarCostMultiplier(1);
             const playerEntity = state.entities[1];
             let outOfRange = false;
+            const assaultType = state.planning.assaultType;
 
             state.planning.turns.forEach(turn => {
                 turn.forEach(idx => {
@@ -2067,7 +2094,11 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    if (!isReachable) {
+                    if (assaultType === 'warplane') {
+                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                    } else if (assaultType === 'missile') {
+                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                    } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
                         const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
@@ -2084,7 +2115,7 @@
             });
 
             if (outOfRange) {
-                notify("Some tiles are out of Air Support range (200 tiles from Capital)!", "error");
+                notify("Some tiles are out of range (200 tiles from Capital)!", "error");
                 return;
             }
 
@@ -2126,7 +2157,11 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    if (!isReachable) {
+                    if (assaultType === 'warplane') {
+                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                    } else if (assaultType === 'missile') {
+                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                    } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
                         const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
@@ -2135,7 +2170,7 @@
                         if (dist <= 200) {
                             baseCost = CONFIG.TRANSPORT_COST * 50;
                         } else {
-                            baseCost = Infinity; // Should have been caught by pre-deploy check
+                            baseCost = Infinity; 
                         }
                     }
                     turnCost += baseCost * warMultiplier;
@@ -2158,63 +2193,72 @@
                         const isReachable = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === 1 || state.alliances.has(`1-${state.tileOwners[n]}`) || state.alliances.has(`${state.tileOwners[n]}-1`)));
                         
                         let actualCost = (state.tileTypes[idx] === 3 ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
-                        if (!isReachable) {
-                            const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
-                            const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
-                            const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
+                        
+                        const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
+                        const cy = playerEntity.capitalPos ? playerEntity.capitalPos.y : -1;
+                        const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
 
-                            if (dist <= 200) {
-                                actualCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
-                                // Air Support Visual
-                                const plane = document.createElement('div');
-                                plane.className = 'plane'; plane.innerText = '🚀';
-                                plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
-                                plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
-                                container.appendChild(plane);
-                                setTimeout(() => { plane.style.left = `${x * CONFIG.TILE_SIZE}px`; plane.style.top = `${y * CONFIG.TILE_SIZE}px`; }, 50);
-                                setTimeout(() => plane.remove(), 1000);
-                            } else {
-                                // Skip tiles that are out of range if they somehow made it here
-                                return;
+                        if (assaultType === 'warplane') {
+                            actualCost = (playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT) * warMultiplier;
+                            executeWarplaneAssault(x, y, cx, cy, idx, activeWar);
+                        } else if (assaultType === 'missile') {
+                            actualCost = ((CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT) * warMultiplier;
+                            executeWarMissileAssault(x, y, cx, cy, idx, activeWar);
+                        } else {
+                            if (!isReachable) {
+                                if (dist <= 200) {
+                                    actualCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
+                                    // Air Support Visual
+                                    const plane = document.createElement('div');
+                                    plane.className = 'plane'; plane.innerText = '🚀';
+                                    plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                                    plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                                    container.appendChild(plane);
+                                    setTimeout(() => { plane.style.left = `${x * CONFIG.TILE_SIZE}px`; plane.style.top = `${y * CONFIG.TILE_SIZE}px`; }, 50);
+                                    setTimeout(() => plane.remove(), 1000);
+                                } else {
+                                    return;
+                                }
                             }
+
+                            claim(x, y, true, 1); 
+                            
+                            // Rocket Visual
+                            const angle = Math.atan2(y - cy, x - cx) * (180 / Math.PI);
+                            const rocket = document.createElement('div');
+                            rocket.className = 'plane';
+                            rocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img" style="transform: rotate(${angle}deg)">`;
+                            rocket.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                            rocket.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                            container.appendChild(rocket);
+                            
+                            const launchSfx = new Audio('assets/fx/launching-missile.mp3');
+                            launchSfx.volume = 0.3;
+                            launchSfx.play().catch(() => {});
+
+                            setTimeout(() => { 
+                                rocket.style.left = `${x * CONFIG.TILE_SIZE}px`; 
+                                rocket.style.top = `${y * CONFIG.TILE_SIZE}px`; 
+                            }, 50);
+                            
+                            setTimeout(() => {
+                                rocket.remove();
+                                if (type === 5 || type === 6) {
+                                    createExplosion(x, y);
+                                }
+                            }, 1000);
                         }
 
-                        claim(x, y, true, 1); 
                         state.balance -= actualCost;
                         state.entities[1].balance = state.balance; 
                         playerEntity.tileCost += 0.25; 
-                        
-                        // Fix: Rocket Visual for player assault
-                        const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
-                        const angle = Math.atan2(y - cy, x - cx) * (180 / Math.PI);
-                        const rocket = document.createElement('div');
-                        rocket.className = 'plane';
-                        rocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img" style="transform: rotate(${angle}deg)">`;
-                        rocket.style.left = `${cx * CONFIG.TILE_SIZE}px`;
-                        rocket.style.top = `${cy * CONFIG.TILE_SIZE}px`;
-                        container.appendChild(rocket);
-                        
-                        const launchSfx = new Audio('assets/fx/launching-missile.mp3');
-                        launchSfx.volume = 0.3;
-                        launchSfx.play().catch(() => {});
-
-                        setTimeout(() => { 
-                            rocket.style.left = `${x * CONFIG.TILE_SIZE}px`; 
-                            rocket.style.top = `${y * CONFIG.TILE_SIZE}px`; 
-                        }, 50);
-                        
-                        setTimeout(() => {
-                            rocket.remove();
-                            if (type === 5 || type === 6) {
-                                createExplosion(x, y);
-                            }
-                        }, 1000);
 
                         // Track losses
                         activeWar.losses.target.tiles++;
                         if (type === 5) activeWar.losses.target.cities++;
 
                         if (type === 6) { // Capital conquered
+                            const enemy = state.entities[oldOwner];
                             enemy.hasCapital = false;
                             enemy.capitalPos = null;
                             enemy.paralyzedCycles = 15;
@@ -2236,6 +2280,158 @@
                 setTimeout(executeTurn, 1000); 
             };
             executeTurn();
+        }
+
+        function executeWarMissileAssault(tx, ty, cx, cy, targetIdx, activeWar) {
+            const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
+            const rocket = document.createElement('div');
+            rocket.className = 'plane';
+            rocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img" style="transform: rotate(${angle}deg)">`;
+            rocket.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+            rocket.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+            container.appendChild(rocket);
+            
+            const launchSfx = new Audio('assets/fx/launching-missile.mp3');
+            launchSfx.volume = 0.3; launchSfx.play().catch(() => {});
+
+            setTimeout(() => { 
+                rocket.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
+                rocket.style.top = `${ty * CONFIG.TILE_SIZE}px`; 
+            }, 50);
+
+            setTimeout(() => {
+                rocket.remove();
+                createExplosion(tx, ty);
+                
+                const type = state.tileTypes[targetIdx];
+                if (type === 5) { // City
+                    state.cityIndices.delete(targetIdx);
+                    state.tileTypes[targetIdx] = 2; // Land
+                    state.entities[state.tileOwners[targetIdx]].cityCount--;
+                    
+                    // Remove labels near the target
+                    const labels = document.querySelectorAll('.city-label');
+                    labels.forEach(l => {
+                        const lRect = l.getBoundingClientRect();
+                        const lx = (parseFloat(l.style.left) / CONFIG.TILE_SIZE);
+                        const ly = (parseFloat(l.style.top) / CONFIG.TILE_SIZE);
+                        if (Math.abs(lx - tx) < 1 && Math.abs(ly - ty) < 1 && !l.classList.contains('capital-label')) {
+                            l.remove();
+                        }
+                    });
+                }
+                claim(tx, ty, true, 1);
+                drawTile(tx, ty);
+            }, 1000);
+        }
+
+        function executeWarplaneAssault(tx, ty, cx, cy, targetIdx, activeWar) {
+            const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
+            const warplane = document.createElement('div');
+            warplane.className = 'plane';
+            warplane.style.width = '64px'; warplane.style.height = '64px';
+            warplane.innerHTML = `<img src="assets/warplane.gif" class="rocket-img" style="transform: rotate(${angle + 90}deg)">`; // Asset faces Up (90 deg)
+            warplane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+            warplane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+            warplane.style.transition = 'all 2s linear';
+            container.appendChild(warplane);
+
+            const flySfx = new Audio('assets/fx/warplane-sound-effect.mp3');
+            flySfx.volume = 0.4; flySfx.loop = true; flySfx.play().catch(() => {});
+
+            // Fly to target
+            setTimeout(() => {
+                warplane.style.left = `${tx * CONFIG.TILE_SIZE}px`;
+                warplane.style.top = `${ty * CONFIG.TILE_SIZE}px`;
+            }, 50);
+
+            // Once at target (after 2s transition)
+            setTimeout(() => {
+                // Drop 5 missiles
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        const mX = tx + (Math.random() * 4 - 2);
+                        const mY = ty + (Math.random() * 4 - 2);
+                        
+                        const mRocket = document.createElement('div');
+                        mRocket.className = 'plane';
+                        mRocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img" style="transform: rotate(180deg)">`;
+                        mRocket.style.left = `${tx * CONFIG.TILE_SIZE}px`;
+                        mRocket.style.top = `${ty * CONFIG.TILE_SIZE}px`;
+                        container.appendChild(mRocket);
+                        
+                        setTimeout(() => {
+                            mRocket.style.top = `${(mY + 2) * CONFIG.TILE_SIZE}px`;
+                            mRocket.style.opacity = '0';
+                        }, 50);
+
+                        setTimeout(() => {
+                            mRocket.remove();
+                            // Warplane specific explosion
+                            const exp = document.createElement('img');
+                            exp.src = 'assets/warplane-explosion.gif';
+                            exp.className = 'explosion-gif';
+                            exp.style.width = '128px'; exp.style.height = '128px';
+                            exp.style.left = `${mX * CONFIG.TILE_SIZE}px`;
+                            exp.style.top = `${mY * CONFIG.TILE_SIZE}px`;
+                            container.appendChild(exp);
+                            
+                            const expSfx = new Audio('assets/fx/warp_exp_sound.mp3');
+                            expSfx.volume = 0.3; expSfx.play().catch(() => {});
+                            setTimeout(() => exp.remove(), 1500);
+                        }, 400);
+                    }, i * 200);
+                }
+
+                // AOE Destruction (15 tile radius)
+                for (let iy = -15; iy <= 15; iy++) {
+                    for (let ix = -15; ix <= 15; ix++) {
+                        const dist = Math.sqrt(ix*ix + iy*iy);
+                        if (dist <= 15) {
+                            const nX = Math.floor(tx + ix);
+                            const nY = Math.floor(ty + iy);
+                            if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
+                                const nIdx = nY * CONFIG.COLS + nX;
+                                if (state.tileTypes[nIdx] === 5) { // City
+                                    state.cityIndices.delete(nIdx);
+                                    state.tileTypes[nIdx] = 2; // Land
+                                    const owner = state.tileOwners[nIdx];
+                                    if (owner > 0) state.entities[owner].cityCount--;
+                                    drawTile(nX, nY);
+                                    
+                                    // Remove labels
+                                    const labels = document.querySelectorAll('.city-label');
+                                    labels.forEach(l => {
+                                        const lx = (parseFloat(l.style.left) / CONFIG.TILE_SIZE);
+                                        const ly = (parseFloat(l.style.top) / CONFIG.TILE_SIZE);
+                                        if (Math.abs(lx - nX) < 1 && Math.abs(ly - nY) < 1 && !l.classList.contains('capital-label')) {
+                                            l.remove();
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                claim(tx, ty, true, 1);
+
+                // Return to base
+                setTimeout(() => {
+                    warplane.style.transition = 'all 2s ease-in';
+                    warplane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                    warplane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                    // Rotate back
+                    const returnAngle = Math.atan2(cy - ty, cx - tx) * (180 / Math.PI);
+                    warplane.querySelector('img').style.transform = `rotate(${returnAngle + 90}deg)`;
+                    
+                    setTimeout(() => {
+                        warplane.remove();
+                        flySfx.pause();
+                    }, 2000);
+                }, 1500);
+
+            }, 2000);
         }
 
         function executeBotAssault(war) {
@@ -2536,7 +2732,10 @@
             // Calculate rotation towards target
             const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
             
-            plane.innerHTML = `<img src="${isWar ? 'assets/rocket.gif' : 'assets/fx/transport.png'}" class="rocket-img" style="transform: rotate(${angle}deg)">`;
+            // For Airplane (transport), base orientation is 20 deg (up-right)
+            const displayAngle = isWar ? angle : angle - 20;
+            
+            plane.innerHTML = `<img src="${isWar ? 'assets/rocket.gif' : 'assets/transport-airplane.gif'}" class="rocket-img" style="transform: rotate(${displayAngle}deg)">`;
             plane.style.left = `${cx * CONFIG.TILE_SIZE}px`;
             plane.style.top = `${cy * CONFIG.TILE_SIZE}px`;
             container.appendChild(plane);
@@ -2548,7 +2747,21 @@
                 launchSfx.play().catch(() => {});
             }
 
-            setTimeout(() => { plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; }, 50);
+            // Airplane Take-off logic
+            const flightTime = 2000;
+            if (!isWar) {
+                plane.style.transition = 'transform 0.5s ease-out'; // Take-off rotation
+                setTimeout(() => {
+                    plane.style.transition = `all ${flightTime/1000}s cubic-bezier(0.4, 0, 0.2, 1)`;
+                    plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
+                    plane.style.top = `${ty * CONFIG.TILE_SIZE}px`;
+                }, 500);
+            } else {
+                setTimeout(() => { 
+                    plane.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
+                    plane.style.top = `${ty * CONFIG.TILE_SIZE}px`; 
+                }, 50);
+            }
             
             setTimeout(() => { 
                 state.launchedMissiles.delete(targetIdx); // Clean up tracking
@@ -2580,7 +2793,7 @@
                 
                 claim(tx, ty, true, 1); 
                 plane.remove(); 
-            }, 2000);
+            }, isWar ? 2000 : 2500);
         }
 
         function gameLoop(timestamp) {
@@ -3687,7 +3900,7 @@
             // Find all owned indices
             const ownedIndices = [];
             for (let i = 0; i < state.tileTypes.length; i++) {
-                if (state.tileTypes[i] >= 2) ownedIndices.push(i);
+                if (state.tileOwners[i] === 1 && state.tileTypes[i] >= 2) ownedIndices.push(i);
             }
 
             if (ownedIndices.length === 0) return;
