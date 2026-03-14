@@ -1039,7 +1039,7 @@
                 tokens: 5,
                 trees: {
                     base: { paintCapacity: 0 },
-                    economic: { tileCost: 0, rebuildCost: 0, maxBalance: 0, warPenalty: 0 },
+                    economic: { tileCost: 0, rebuildCost: 0, maxBalance: 0, warPenalty: 0, cityDevLimit: 0 },
                     military: { warMissile: 0, warplane: 0, warTileCost: 0, annexRadius: 0 },
                     tokens: { miner: 0 },
                     political: {}
@@ -3142,7 +3142,7 @@
             const price = 100 * Math.pow(2, level);
             
             document.getElementById('donut-develop-label').innerText = `hj${level}`;
-            document.getElementById('donut-develop-price').innerText = level < 8 ? `$${price.toLocaleString()}` : 'MAX';
+            document.getElementById('donut-develop-price').innerText = level < getMaxCityLevel() ? `$${price.toLocaleString()}` : 'MAX';
             document.getElementById('donut-develop-count').innerText = level;
             
             donutMenu.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
@@ -3159,7 +3159,7 @@
             if (state.activeDonutIdx === null) return;
             const idx = state.activeDonutIdx;
             const level = state.cityLevels[idx] || 0;
-            if (level >= 8) return;
+            if (level >= getMaxCityLevel()) return;
             
             const price = 100 * Math.pow(2, level);
             if (state.balance < price) return;
@@ -3566,7 +3566,7 @@
                     if (state.tileOwners[idx] === 1) {
                         const level = state.cityLevels[idx];
                         const maxPop = 5000 * (level + 1);
-                        if (state.cityPopulations[idx] >= maxPop && level < 8) {
+                        if (state.cityPopulations[idx] >= maxPop && level < getMaxCityLevel()) {
                             overpopPenalty += state.balance * 0.10;
                         }
                     }
@@ -3942,6 +3942,7 @@
                         ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
                         ${renderResearchItem('Economic', 'maxBalance', 'Increase Max Balance', 'Levels 1-100: +50% to +10000% capacity', 100, 1)}
                         ${renderResearchItem('Economic', 'warPenalty', 'Reduce War Balance Penalty', 'Levels 1-30: Reduce penalty from -0.5% to -0.01%', 30, 1)}
+                        ${renderResearchItem('Economic', 'cityDevLimit', 'City Development Limit', 'Levels 1-12: +1 max city level per level', 12, 6)}
                     </div>
                 `;
             } else if (tab === 'military') {
@@ -3980,7 +3981,7 @@
             } else if (tab === 'progress') {
                  const caps = {
                      base: { paintCapacity: 200 },
-                     economic: { tileCost: 10, rebuildCost: 10, maxBalance: 100, warPenalty: 30 },
+                     economic: { tileCost: 10, rebuildCost: 10, maxBalance: 100, warPenalty: 30, cityDevLimit: 12 },
                      military: { warMissile: 20, warplane: 10, warTileCost: 60, annexRadius: 30 },
                      tokens: { miner: 50 }
                  };
@@ -4081,6 +4082,10 @@
             // Exponential scaling
             // bonus = startVal * (endVal/startVal)^( (level-1)/(max-1) )
             return startVal * Math.pow(endVal / startVal, (level - 1) / (max - 1));
+        }
+
+        function getMaxCityLevel() {
+            return 8 + (state.research.trees.economic.cityDevLimit || 0);
         }
 
         function openFactionModal() {
@@ -4386,7 +4391,7 @@
 
                 const devBtn = document.getElementById('btn-bulk-develop');
                 if (devBtn) {
-                    const playerCities = Array.from(state.cityIndices).filter(idx => state.tileOwners[idx] === 1 && state.cityLevels[idx] < 8);
+                    const playerCities = Array.from(state.cityIndices).filter(idx => state.tileOwners[idx] === 1 && state.cityLevels[idx] < getMaxCityLevel());
                     let totalDevCost = 0;
                     playerCities.forEach(idx => {
                         const level = state.cityLevels[idx] || 0;
@@ -4437,7 +4442,7 @@
                             <div class="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Population</div>
                             <div class="text-xs font-mono font-black text-blue-400">${city.pop.toLocaleString()} / ${city.maxPop.toLocaleString()}</div>
                         </div>
-                        <button onclick="developCity(${city.idx})" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-4 py-2 rounded-lg border border-blue-500/30 text-[9px] font-black uppercase transition-all">Develop</button>
+                        <button onclick="developCity(${city.idx})" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-4 py-2 rounded-lg border border-blue-500/30 text-[9px] font-black uppercase transition-all">${city.level < getMaxCityLevel() ? 'Develop' : 'MAX'}</button>
                     </div>
                 </div>
             `).join('');
@@ -4445,7 +4450,7 @@
 
         function developCity(idx) {
             const level = state.cityLevels[idx] || 0;
-            if (level >= 8) { notify("City is already fully developed!", "info"); return; }
+            if (level >= getMaxCityLevel()) { notify("City is already fully developed!", "info"); return; }
             
             const cost = 100 * Math.pow(2, level);
             if (state.balance < cost) { notify(`Insufficient funds! Need $${cost.toLocaleString()}`, "error"); return; }
@@ -4459,7 +4464,7 @@
         }
 
         function bulkDevelopCities() {
-            const playerCities = Array.from(state.cityIndices).filter(idx => state.tileOwners[idx] === 1 && state.cityLevels[idx] < 8);
+            const playerCities = Array.from(state.cityIndices).filter(idx => state.tileOwners[idx] === 1 && state.cityLevels[idx] < getMaxCityLevel());
             if (playerCities.length === 0) { notify("No cities need development!", "info"); return; }
             
             let totalCost = 0;
