@@ -5518,6 +5518,21 @@
             else if (e.key === '8') setMode('ally-city');
             else if (e.key === '+' || e.key === '=') changeZoom(CONFIG.ZOOM_STEP);
             else if (e.key === '-' || e.key === '_') changeZoom(-CONFIG.ZOOM_STEP);
+            
+            // UI Toggles
+            else if (e.key.toLowerCase() === 'p') {
+                const pie = document.getElementById('team-pie-container');
+                if (state.gameMode === 'team') {
+                    pie.style.display = pie.style.display === 'none' ? 'block' : 'none';
+                }
+            }
+            else if (e.key === 'F3') {
+                e.preventDefault();
+                const prof = document.getElementById('pc-profiler');
+                if (state.isPC) {
+                    prof.style.display = prof.style.display === 'none' ? 'block' : 'none';
+                }
+            }
         });
 
         // Disable Right Click
