@@ -553,6 +553,78 @@
         </div>
     </div>
 
+    <!-- Research Modal -->
+    <div id="research-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[900] flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl h-[600px] flex overflow-hidden shadow-2xl">
+            <!-- Sidebar -->
+            <div class="w-64 bg-slate-950/50 border-r border-slate-800 p-6 flex flex-col">
+                <h2 class="text-xl font-black text-white italic mb-8">RESEARCH</h2>
+                <div class="space-y-2 flex-1">
+                    <button onclick="setResearchTab('economic')" id="tab-res-economic" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all bg-blue-600 text-white shadow-lg">Economic</button>
+                    <button onclick="setResearchTab('military')" id="tab-res-military" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Military</button>
+                    <button onclick="setResearchTab('political')" id="tab-res-political" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Political</button>
+                </div>
+                <div class="mt-auto bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+                    <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">R-Tokens</div>
+                    <div id="res-token-count" class="text-2xl font-black text-yellow-400">5</div>
+                </div>
+            </div>
+            <!-- Content -->
+            <div class="flex-1 p-10 overflow-y-auto custom-scrollbar">
+                <div id="res-content-economic" class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Economic Research</h3>
+                        <p class="text-slate-400 text-sm">Improve your empire's fiscal efficiency and expansion costs.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-white uppercase text-sm">Tile Cost Reduction</div>
+                                <div class="text-xs text-slate-500 mt-1">Levels 1-10: Reduce cost from -1% to -95%</div>
+                            </div>
+                            <button onclick="upgradeResearch('economic', 'tileCost')" class="bg-blue-600 px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg hover:scale-105 transition-all">UPGRADE (1T)</button>
+                        </div>
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-white uppercase text-sm">Rebuild Capital Discount</div>
+                                <div class="text-xs text-slate-500 mt-1">Levels 1-10: Reduce cost from -1% to -95%</div>
+                            </div>
+                            <button onclick="upgradeResearch('economic', 'rebuildCost')" class="bg-blue-600 px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg hover:scale-105 transition-all">UPGRADE (1T)</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Other tabs will be handled via JS -->
+            </div>
+            <button onclick="closeResearch()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Faction Creator Modal -->
+    <div id="faction-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[850] flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl">
+            <h2 class="text-2xl font-black text-white italic mb-6 uppercase">Create Faction</h2>
+            <div class="space-y-4">
+                <label for="faction-name-input" class="sr-only">Faction Name</label>
+                <input type="text" id="faction-name-input" maxlength="15" placeholder="Faction Name" title="Faction Name"
+                       class="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white font-bold outline-none focus:border-blue-500 transition-colors">
+                
+                <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5">
+                    <div class="text-[10px] text-slate-500 font-bold uppercase mb-2">Members (Max 4)</div>
+                    <div id="faction-members-list" class="space-y-2">
+                        <!-- Allies with checkbox -->
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button onclick="closeFactionModal()" class="flex-1 bg-slate-800 py-4 rounded-xl font-bold text-slate-400">CANCEL</button>
+                    <button onclick="confirmCreateFaction()" class="flex-1 bg-blue-600 py-4 rounded-xl font-bold text-white shadow-lg">CREATE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="login-screen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm">
             <h1 class="text-3xl font-bold text-center text-blue-500 mb-2 italic">TERRITORY.IO</h1>
@@ -661,10 +733,16 @@
                     <button id="btn-rebuild-capital" onclick="rebuildCapital()" class="w-full bg-white text-red-600 py-2 rounded-xl font-bold text-[9px] uppercase hover:bg-slate-100 transition-colors">Rebuild ($50k+)</button>
                 </div>
 
-                <!-- Leaderboard UI -->
                 <div id="leaderboard-ui" class="bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-white/5 pointer-events-auto shadow-xl w-64">
                     <div class="flex justify-between items-center mb-3">
-                        <div class="text-[10px] text-slate-500 font-bold uppercase">Leaderboard</div>
+                        <div class="flex gap-2">
+                            <button onclick="openResearch()" class="p-2 bg-blue-600/20 hover:bg-blue-600/40 rounded-lg border border-blue-500/30 transition-all" title="Open Research">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#3b82f6" viewBox="0 0 256 256"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z" opacity="0.2"></path><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm12-88a12,12,0,1,1-12-12A12,12,0,0,1,140,128Z"></path></svg>
+                            </button>
+                            <button id="btn-open-faction" onclick="openFactionModal()" class="hidden p-2 bg-emerald-600/20 hover:bg-emerald-600/40 rounded-lg border border-emerald-500/30 transition-all" title="Create Faction">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#10b981" viewBox="0 0 256 256"><path d="M200,128a72,72,0,1,1-72-72A72,72,0,0,1,200,128Z" opacity="0.2"></path><path d="M128,48a80,80,0,1,0,80,80A80.09,80.09,0,0,0,128,48Zm0,144a64,64,0,1,1,64-64A64.07,64.07,0,0,1,128,192Zm40-64a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h24A8,8,0,0,1,168,128Z"></path></svg>
+                            </button>
+                        </div>
                         <select id="leaderboard-select" onchange="state.leaderboardMode = this.value; updateLeaderboard()" class="bg-slate-800 border border-slate-700 rounded-lg text-[9px] font-bold text-white px-2 py-1 outline-none focus:border-blue-500" title="Select Leaderboard">
                             <option value="tiles">Territory Size</option>
                             <option value="ovcd">OVCD (Dev)</option>
@@ -726,6 +804,19 @@
                 <button id="mode-pan" onclick="setMode('pan')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Pan Mode" aria-label="Switch to pan mode">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M200,128a8,8,0,0,1-8,8H136v56a8,8,0,0,1-16,0V136H64a8,8,0,0,1,0-16h56V64a8,8,0,0,1,16,0v56h56A8,8,0,0,1,200,128Z"></path><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"></path></svg>
                     <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">4</span>
+                </button>
+                <!-- Shared Ownership Modes -->
+                <button id="mode-ally-paint" onclick="setMode('ally-paint')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Ally Paint" aria-label="Ally Paint">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#10b981" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31L144,67.31,188.69,112ZM181,37l38,38L200,94,162,56Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">6</span>
+                </button>
+                <button id="mode-team-paint" onclick="setMode('team-paint')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Teammate Paint" aria-label="Teammate Paint">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#3b82f6" viewBox="0 0 256 256"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31L144,67.31,188.69,112ZM181,37l38,38L200,94,162,56Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">7</span>
+                </button>
+                <button id="mode-ally-city" onclick="setMode('ally-city')" class="bg-slate-800 p-4 rounded-2xl border border-white/5 transition-all relative" title="Ally City" aria-label="Ally City">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#f59e0b" viewBox="0 0 256 256"><path d="M240,208H224V96a16,16,0,0,0-16-16H144V40a16,16,0,0,0-16-16H48A16,16,0,0,0,32,40V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM48,40h80V208H48ZM144,96h64V208H144Z"></path></svg>
+                    <span class="absolute -top-1 -right-1 bg-slate-900 text-[8px] font-bold px-1 rounded border border-white/10 text-slate-400">8</span>
                 </button>
             </div>
             
@@ -816,6 +907,17 @@
             entities: [], // { id: 'pr??', type: 'player', balance: 1000, color: '#3b82f6', ... }
             wars: [], // Active wars: { id: 'tky??????', host: 1, target: 2, justification: 0, active: false, ... }
             alliances: new Set(), // Set of "owner1-owner2" strings
+            sharedOwnership: {}, // { tileIdx: { originalOwner: idx, sharedWith: idx, type: 'ally'|'teammate'|'city' } }
+            factions: [], // { name: 'Faction Name', members: [1, 2, 3] }
+            research: {
+                tokens: 5,
+                trees: {
+                    economic: { tileCost: 0, rebuildCost: 0 },
+                    military: { warMissile: 0, warplane: 0 },
+                    political: { miner: 0 }
+                },
+                lastMinerTick: Date.now()
+            },
             
             planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null, assaultType: 'support' },
             botAllyCooldowns: {}, // { entityIdx: timestamp }
@@ -1352,8 +1454,13 @@
             const activeWar = state.wars.find(w => w.active && (w.host === entityIdx || w.allies.includes(entityIdx) || w.target === entityIdx || w.targetAllies.includes(entityIdx)));
             if (!activeWar) return 1;
             
+            let researchDiscount = 0;
+            if (entityIdx === 1) {
+                researchDiscount = getResearchBonus('economic', 'tileCost', 10);
+            }
+
             // Primary host/target always pay 100x
-            if (entityIdx === activeWar.host || entityIdx === activeWar.target) return 100;
+            if (entityIdx === activeWar.host || entityIdx === activeWar.target) return 100 * (1 - researchDiscount);
 
             const onHostSide = activeWar.host === entityIdx || activeWar.allies.includes(entityIdx);
             const sideHostIdx = onHostSide ? activeWar.host : activeWar.target;
@@ -1363,10 +1470,10 @@
             
             // Teammates of the side host (Host or Target) pay regular price (1x)
             if (sideHostEntity.teamId !== undefined && sideHostEntity.teamId === currentEntity.teamId) {
-                return 1;
+                return 1 * (1 - researchDiscount);
             }
             
-            return 100;
+            return 100 * (1 - researchDiscount);
         }
 
         function claim(x, y, free = false, ownerIdx = 1) {
@@ -1563,7 +1670,7 @@
 
         function setMode(m) {
             state.mode = m;
-            ['paint','pan','city','transport','missile'].forEach(mode => {
+            ['paint','pan','city','transport','missile','ally-paint','team-paint','ally-city'].forEach(mode => {
                 const btn = document.getElementById(`mode-${mode}`);
                 if (btn) btn.classList.toggle('active-btn', m === mode);
             });
@@ -1704,32 +1811,79 @@
                         notify("Target too far for Air Support (Max 200 tiles)!", "error");
                     }
                 }
-            } else if (state.mode === 'paint') {
+            } else if (state.mode === 'paint' || state.mode === 'ally-paint' || state.mode === 'team-paint') {
                 closeDonutMenu();
-                // Prevent painting over other owners
-                if (state.tileOwners[idx] !== 0 && state.tileOwners[idx] !== 1) return;
+                // Prevent painting over other owners unless it's shared paint
+                const ownerIdx = state.tileOwners[idx];
+                if (ownerIdx !== 0 && ownerIdx !== 1) {
+                    // Check if it's our ally for ally-paint
+                    if (state.mode === 'ally-paint') {
+                        if (!state.alliances.has(`1-${ownerIdx}`) && !state.alliances.has(`${ownerIdx}-1`)) return;
+                    } else if (state.mode === 'team-paint') {
+                        const entity = state.entities[ownerIdx];
+                        if (entity.teamId === undefined || entity.teamId !== state.entities[1].teamId) return;
+                    } else {
+                        return;
+                    }
+                }
                 
                 const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
                 const hasOwnedNeighbor = neighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
-                if (state.tileOwners[idx] === 0 && hasOwnedNeighbor) claim(x, y, false, 1);
-            } else if (state.mode === 'city') {
+                
+                if (state.mode === 'paint') {
+                    if (ownerIdx === 0 && hasOwnedNeighbor) claim(x, y, false, 1);
+                } else {
+                    // Shared Paint logic
+                    const targetOwner = (state.mode === 'ally-paint') ? ownerIdx : ownerIdx; // Should be used on unowned tiles next to ally too?
+                    // Let's allow painting unowned tiles FOR ally too if next to us or them
+                    const hasAllyNeighbor = neighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === ownerIdx);
+                    
+                    if (ownerIdx === 0 && (hasOwnedNeighbor || hasAllyNeighbor)) {
+                        // Find which ally to paint for (simplification: first found neighbor ally)
+                        let allyIdx = 0;
+                        for (let n of neighbors) {
+                            if (n >= 0 && n < state.tileTypes.length) {
+                                const no = state.tileOwners[n];
+                                if (no > 1) {
+                                    if (state.mode === 'ally-paint' && (state.alliances.has(`1-${no}`) || state.alliances.has(`${no}-1`))) { allyIdx = no; break; }
+                                    if (state.mode === 'team-paint' && state.entities[no].teamId === state.entities[1].teamId) { allyIdx = no; break; }
+                                }
+                            }
+                        }
+                        if (allyIdx > 0) {
+                            claim(x, y, false, allyIdx);
+                            state.sharedOwnership[idx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
+                        }
+                    }
+                }
+            } else if (state.mode === 'city' || state.mode === 'ally-city') {
                 closeDonutMenu();
                 const ownerIdx = state.tileOwners[idx];
                 const type = state.tileTypes[idx];
 
-                if (ownerIdx === 1 && type === 2) { // Only on owned land
+                if ((ownerIdx === 1 || (state.mode === 'ally-city' && ownerIdx > 1)) && type === 2) { 
+                    // Check if it's our ally for ally-city
+                    if (state.mode === 'ally-city') {
+                        if (!state.alliances.has(`1-${ownerIdx}`) && !state.alliances.has(`${ownerIdx}-1`)) return;
+                    }
+
                     const isTooClose = Array.from(state.cityIndices).some(cityIdx => {
                         const cx = cityIdx % CONFIG.COLS, cy = Math.floor(cityIdx / CONFIG.COLS);
                         const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
                         return dist < CONFIG.MIN_CITY_DISTANCE;
                     });
                     
-                    if (isTooClose) {
-                        if (state.isPC) document.getElementById('prof-status').innerText = 'TOO CLOSE';
-                        return;
-                    }
+                    if (isTooClose) return;
                     
-                    state.isInteracting = false; openCityModal(idx);
+                    state.isInteracting = false; 
+                    if (state.mode === 'ally-city') {
+                        state.pendingCityIdx = idx;
+                        state.pendingCityShared = true;
+                        document.getElementById('city-modal').classList.remove('hidden');
+                        document.getElementById('city-name-input').focus();
+                    } else {
+                        openCityModal(idx);
+                    }
                 } else if (ownerIdx !== 0 && ownerIdx !== 1 && type === 6) { // Clicked bot capital
                     state.isInteracting = false;
                     openDiplomacy(ownerIdx);
@@ -1771,6 +1925,19 @@
             }
 
             document.getElementById('btn-propose-alliance').classList.toggle('hidden', isAlly || isTeammate);
+            
+            // Add Break Alliance button if ally and not teammate
+            let btnBreak = document.getElementById('btn-break-alliance');
+            if (!btnBreak) {
+                btnBreak = document.createElement('button');
+                btnBreak.id = 'btn-break-alliance';
+                btnBreak.onclick = () => breakAlliance();
+                btnBreak.className = 'w-full bg-orange-600 hover:bg-orange-500 py-4 rounded-2xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-3 mt-3';
+                btnBreak.innerHTML = '<span>💔</span> BREAK ALLIANCE';
+                document.getElementById('diplo-actions').appendChild(btnBreak);
+            }
+            btnBreak.classList.toggle('hidden', !isAlly || isTeammate);
+
             document.getElementById('btn-send-aid').classList.toggle('hidden', !(isAlly || isTeammate));
             
             // Check for active war or justification (including wars where player is an ally/teammate)
@@ -1846,6 +2013,36 @@
             state.activeDiploIdx = null;
         }
 
+        function breakAlliance() {
+            const idx = state.activeDiploIdx;
+            if (!idx) return;
+            
+            if (state.alliances.has(`1-${idx}`) || state.alliances.has(`${idx}-1`)) {
+                state.alliances.delete(`1-${idx}`);
+                state.alliances.delete(`${idx}-1`);
+                notify(`Alliance broken with ${state.entities[idx].name}!`, 'error');
+                
+                // Seize shared ownership tiles (Whoever breaks first seizes)
+                // Actually, the request says "whoever breaks the alliance first seizes the shared tiles"
+                // So if the player breaks it, they seize tiles shared with this ally.
+                Object.keys(state.sharedOwnership).forEach(tileIdx => {
+                    const shared = state.sharedOwnership[tileIdx];
+                    if ((shared.originalOwner === idx && shared.sharedWith === 1) || 
+                        (shared.originalOwner === 1 && shared.sharedWith === idx)) {
+                        
+                        const x = tileIdx % CONFIG.COLS, y = Math.floor(tileIdx / CONFIG.COLS);
+                        // Player seizes it because player is the one calling breakAlliance()
+                        if (state.tileOwners[tileIdx] !== 1) {
+                            claim(x, y, true, 1);
+                        }
+                        delete state.sharedOwnership[tileIdx];
+                    }
+                });
+
+                openDiplomacy(idx);
+            }
+        }
+
         function proposeAlliance() {
             const idx = state.activeDiploIdx;
             if (!idx) return;
@@ -1870,12 +2067,14 @@
 
         function sendAid() {
             const amount = parseInt(document.getElementById('aid-amount').value);
-            if (isNaN(amount) || amount <= 0 || state.balance < amount) {
+            if (isNaN(amount) || amount <= 0 || (state.balance !== Infinity && state.balance < amount)) {
                 alert("Invalid amount or insufficient balance.");
                 return;
             }
             
-            state.balance -= amount;
+            if (state.balance !== Infinity) {
+                state.balance -= amount;
+            }
             state.entities[state.activeDiploIdx].balance += amount;
             alert(`Sent $${amount.toLocaleString()} in aid to ${state.entities[state.activeDiploIdx].name}.`);
             closeAidModal();
@@ -2020,10 +2219,9 @@
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
                     if (state.planning.assaultType === 'support') {
-                        // Air Support now uses Warplane logic
-                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                        baseCost = getWarplaneCost() / warMultiplier;
                     } else if (state.planning.assaultType === 'missile') {
-                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                        baseCost = getWarMissileCost() / warMultiplier;
                     } else if (!isReachable) {
                         // Regular border expansion or other
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
@@ -2106,10 +2304,10 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    if (assaultType === 'warplane') {
-                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                    if (assaultType === 'support') {
+                        baseCost = getWarplaneCost() / warMultiplier;
                     } else if (assaultType === 'missile') {
-                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                        baseCost = getWarMissileCost() / warMultiplier;
                     } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
@@ -2169,10 +2367,10 @@
                     const isWater = state.tileTypes[idx] === 0;
                     let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
                     
-                    if (assaultType === 'warplane') {
-                        baseCost = playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT;
+                    if (assaultType === 'support') {
+                        baseCost = getWarplaneCost() / warMultiplier;
                     } else if (assaultType === 'missile') {
-                        baseCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT;
+                        baseCost = getWarMissileCost() / warMultiplier;
                     } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
@@ -2211,10 +2409,10 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
 
                         if (assaultType === 'support') {
-                            actualCost = (playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT) * warMultiplier;
+                            actualCost = getWarplaneCost();
                             executeWarplaneAssault(x, y, cx, cy, idx, activeWar);
                         } else if (assaultType === 'missile') {
-                            actualCost = ((CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT) * warMultiplier;
+                            actualCost = getWarMissileCost();
                             executeWarMissileAssault(x, y, cx, cy, idx, activeWar);
                         } else {
                             if (!isReachable) {
@@ -2438,12 +2636,16 @@
                     warplane.querySelector('img').style.transform = `rotate(${returnAngle + 90}deg)`;
                     
                     setTimeout(() => {
-                        warplane.remove();
-                        flySfx.pause();
+                        closeWarplaneAssault(warplane, flySfx);
                     }, 2000);
                 }, 1500);
 
             }, 2000);
+        }
+
+        function closeWarplaneAssault(warplane, flySfx) {
+            warplane.remove();
+            if (flySfx) flySfx.pause();
         }
 
         function executeBotAssault(war) {
@@ -2663,6 +2865,7 @@
             const name = document.getElementById('city-name-input').value.trim();
             if (!name || state.pendingCityIdx === null) return;
             const idx = state.pendingCityIdx;
+            const isShared = state.pendingCityShared || false;
             
             state.tileFlags[idx] |= 1; // Mark as building
             state.cityIndices.add(idx);
@@ -2675,12 +2878,18 @@
                 state.cityCount++;
                 drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
                 
+                if (isShared) {
+                    const ownerIdx = state.tileOwners[idx];
+                    state.sharedOwnership[idx] = { originalOwner: ownerIdx, sharedWith: 1, type: 'city' };
+                }
+
                 const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                 const nameTag = document.createElement('div');
                 nameTag.className = 'city-label'; nameTag.innerText = name;
                 nameTag.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
                 nameTag.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
                 container.appendChild(nameTag);
+                state.pendingCityShared = false;
             }, CONFIG.CITY_BUILD_TIME);
         }
 
@@ -2694,13 +2903,11 @@
             const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
             const isWar = !!playerActiveWar;
             
-            // If at war, transport button triggers Air Support (Warplane)
-            if (isWar) {
-                const cost = (playerActiveWar.host === 1 || playerActiveWar.allies.includes(1)) ? 
-                             (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1) : 
-                             (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1);
+            // If at war and specifically in transport mode, trigger Air Support (Warplane)
+            if (isWar && state.mode === 'transport') {
+                const cost = getWarplaneCost();
                 
-                if (state.balance < cost) {
+                if (state.balance !== Infinity && state.balance < cost) {
                     notify("Insufficient balance for Air Support (Warplane)!", "error");
                     return;
                 }
@@ -2714,7 +2921,9 @@
                     return;
                 }
 
-                state.balance -= cost;
+                if (state.balance !== Infinity) {
+                    state.balance -= cost;
+                }
                 state.entities[1].balance = state.balance;
                 executeWarplaneAssault(tx, ty, cx, cy, targetIdx, playerActiveWar);
                 return;
@@ -2772,9 +2981,9 @@
             const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
             if (!playerActiveWar) return;
 
-            const cost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * getWarCostMultiplier(1);
+            const cost = getWarMissileCost();
             
-            if (state.balance < cost) {
+            if (state.balance !== Infinity && state.balance < cost) {
                 notify("Insufficient balance for War Missile!", "error");
                 return;
             }
@@ -2797,7 +3006,9 @@
             const isEnemy = targetOwner !== 0 && targetOwner !== 1 && !state.alliances.has(`1-${targetOwner}`) && !state.alliances.has(`${targetOwner}-1`);
             if (!isEnemy && state.tileTypes[targetIdx] !== 0) return;
 
-            state.balance -= cost;
+            if (state.balance !== Infinity) {
+                state.balance -= cost;
+            }
             state.entities[1].balance = state.balance;
             executeWarMissileAssault(tx, ty, cx, cy, targetIdx, playerActiveWar);
         }
@@ -2806,6 +3017,43 @@
             const delta = timestamp - state.lastFrameTime;
             state.lastFrameTime = timestamp;
             state.frameCount++;
+
+            // Bot Betrayal Logic (Check every cycle)
+            if (state.cycleTimer === 0 && state.lastTick !== timestamp) {
+                state.entities.forEach((bot, idx) => {
+                    if (bot.type === 'bot' && bot.ownedCount > 0) {
+                        const isAlly = state.alliances.has(`1-${idx}`) || state.alliances.has(`${idx}-1`);
+                        if (isAlly) {
+                            // High difficulty bots or those feeling strong might betray
+                            const playerTiles = state.entities[1].ownedCount;
+                            const botTiles = bot.ownedCount;
+                            const betrayalChance = (bot.difficulty === 'insane' ? 0.05 : (bot.difficulty === 'hard' ? 0.02 : 0.005));
+                            
+                            if (botTiles > playerTiles * 1.5 && Math.random() < betrayalChance) {
+                                state.alliances.delete(`1-${idx}`);
+                                state.alliances.delete(`${idx}-1`);
+                                notify(`${bot.name} has BETRAYED you! Alliance broken!`, 'error', bot.capitalPos.x, bot.capitalPos.y);
+                                
+                                // Bot seizes shared tiles because bot broke the alliance
+                                Object.keys(state.sharedOwnership).forEach(tileIdx => {
+                                    const shared = state.sharedOwnership[tileIdx];
+                                    if ((shared.originalOwner === idx && shared.sharedWith === 1) || 
+                                        (shared.originalOwner === 1 && shared.sharedWith === idx)) {
+                                        
+                                        const x = tileIdx % CONFIG.COLS, y = Math.floor(tileIdx / CONFIG.COLS);
+                                        if (state.tileOwners[tileIdx] !== idx) {
+                                            claim(x, y, true, idx);
+                                        }
+                                        delete state.sharedOwnership[tileIdx];
+                                    }
+                                });
+
+                                startJustification(idx, 1); // Bot starts justifying war
+                            }
+                        }
+                    }
+                });
+            }
 
             if (timestamp - state.lastFpsUpdate > 1000) {
                 state.fps = Math.round((state.frameCount * 1000) / (timestamp - state.lastFpsUpdate));
@@ -3173,6 +3421,18 @@
             setTimeout(remove, 5000);
         }
 
+        function getWarplaneCost() {
+            let cost = (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1);
+            cost *= (1 - getResearchBonus('military', 'warplane', 10));
+            return cost;
+        }
+
+        function getWarMissileCost() {
+            let cost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * getWarCostMultiplier(1);
+            cost *= (1 - getResearchBonus('military', 'warMissile', 20));
+            return cost;
+        }
+
         function spawnPop(amt) {
             const p = document.createElement('div');
             p.className = 'bonus-popup'; p.innerText = `+$${Math.floor(amt)}`;
@@ -3206,16 +3466,187 @@
             }, 1000);
         }
 
+        function openResearch() {
+            document.getElementById('research-modal').classList.remove('hidden');
+            updateResearchUI();
+        }
+
+        function closeResearch() {
+            document.getElementById('research-modal').classList.add('hidden');
+        }
+
+        function setResearchTab(tab) {
+            const tabs = ['economic', 'military', 'political'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-res-${t}`);
+                const content = document.getElementById(`res-content-${t}`);
+                if (t === tab) {
+                    btn.className = 'w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all bg-blue-600 text-white shadow-lg';
+                    if (content) content.classList.remove('hidden');
+                } else {
+                    btn.className = 'w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800';
+                    if (content) content.classList.add('hidden');
+                }
+            });
+            
+            // Render content if not already there (for military/political)
+            renderResearchContent(tab);
+        }
+
+        function renderResearchContent(tab) {
+            const container = document.querySelector('#research-modal .flex-1.p-10.overflow-y-auto');
+            if (!container) return;
+            let html = '';
+            if (tab === 'economic') {
+                html = `
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Economic Research</h3>
+                        <p class="text-slate-400 text-sm">Improve your empire's fiscal efficiency and expansion costs.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-8">
+                        ${renderResearchItem('Economic', 'tileCost', 'Tile Cost Reduction', 'Reduce cost from -1% to -95%', 10)}
+                        ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Reduce cost from -1% to -95%', 10)}
+                    </div>
+                `;
+            } else if (tab === 'military') {
+                html = `
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Military Research</h3>
+                        <p class="text-slate-400 text-sm">Enhance your offensive capabilities and reduce weapon costs.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-8">
+                        ${renderResearchItem('Military', 'warMissile', 'War Missile Discount', 'Levels 1-20: Reduce cost from -1% to -95%', 20)}
+                        ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
+                    </div>
+                `;
+            } else if (tab === 'political') {
+                html = `
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Political Research</h3>
+                        <p class="text-slate-400 text-sm">Optimize token mining and internal stability.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-8">
+                        ${renderResearchItem('Political', 'miner', 'R-Token Miner', 'Levels 1-50: +1 token every 30s', 50)}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function renderResearchItem(tree, key, title, desc, max) {
+            const level = state.research.trees[tree.toLowerCase()][key];
+            const isMax = level >= max;
+            return `
+                <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-white uppercase text-sm">${title} (LVL ${level}/${max})</div>
+                        <div class="text-xs text-slate-500 mt-1">${desc}</div>
+                    </div>
+                    <button onclick="upgradeResearch('${tree.toLowerCase()}', '${key}', ${max})" 
+                            class="${isMax ? 'bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:scale-105'} px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all"
+                            ${isMax ? 'disabled' : ''}>
+                        ${isMax ? 'MAXED' : 'UPGRADE (1T)'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function upgradeResearch(tree, key, max) {
+            if (state.research.tokens <= 0) {
+                notify("Not enough Research Tokens!", "error");
+                return;
+            }
+            if (state.research.trees[tree][key] >= max) return;
+            
+            state.research.tokens--;
+            state.research.trees[tree][key]++;
+            updateResearchUI();
+            renderResearchContent(tree);
+            notify(`Upgraded ${key} to level ${state.research.trees[tree][key]}!`, "success");
+        }
+
+        function updateResearchUI() {
+            document.getElementById('res-token-count').innerText = state.research.tokens;
+        }
+
+        function getResearchBonus(tree, key, max) {
+            const level = state.research.trees[tree][key];
+            if (level === 0) return 0;
+            // Exponential from 1% to 95%
+            // bonus = 0.01 * (95/1)^( (level-1)/(max-1) )
+            return 0.01 * Math.pow(95, (level - 1) / (max - 1));
+        }
+
+        function openFactionModal() {
+            const allies = [];
+            for (let i = 2; i < state.entities.length; i++) {
+                if (state.alliances.has(`1-${i}`) || state.alliances.has(`${i}-1`)) allies.push(i);
+            }
+            
+            if (allies.length < 3) {
+                notify("You need at least 3 allies to form a faction!", "error");
+                return;
+            }
+            
+            const listEl = document.getElementById('faction-members-list');
+            listEl.innerHTML = allies.map(idx => `
+                <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors">
+                    <input type="checkbox" id="fac-mem-${idx}" value="${idx}" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500">
+                    <label for="fac-mem-${idx}" class="flex-1 flex items-center gap-2 cursor-pointer">
+                        <div class="w-2 h-2 rounded-full" style="background-color: ${state.entities[idx].color}"></div>
+                        <span class="text-sm font-bold text-white">${state.entities[idx].name}</span>
+                    </label>
+                </div>
+            `).join('');
+            
+            document.getElementById('faction-modal').classList.remove('hidden');
+        }
+
+        function closeFactionModal() {
+            document.getElementById('faction-modal').classList.add('hidden');
+        }
+
+        function confirmCreateFaction() {
+            const name = document.getElementById('faction-name-input').value.trim();
+            if (!name) { notify("Enter a faction name!", "error"); return; }
+            
+            const selected = Array.from(document.querySelectorAll('#faction-members-list input:checked')).map(i => parseInt(i.value));
+            if (selected.length < 3 || selected.length > 3) { // 3 bots + player = 4 members
+                notify("A faction must have exactly 3 allies (4 members total)!", "error");
+                return;
+            }
+            
+            state.factions.push({ name, members: [1, ...selected] });
+            notify(`Faction ${name.toUpperCase()} created!`, "success");
+            closeFactionModal();
+        }
+
         function updateUI(maxVal) {
             state.lastMaxBalance = maxVal; // Store for other functions
             document.getElementById('stat-balance').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(state.balance).toLocaleString()}`;
             document.getElementById('stat-max').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(maxVal).toLocaleString()}`;
             
+            // Faction HUD Visibility
+            const allies = [];
+            for (let i = 2; i < state.entities.length; i++) {
+                if (state.alliances.has(`1-${i}`) || state.alliances.has(`${i}-1`)) allies.push(i);
+            }
+            document.getElementById('btn-open-faction').classList.toggle('hidden', allies.length < 3);
+
             // 100x Cost Indicator during war (for player)
             const playerEntity = state.entities[1];
             const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
             const isWar = !!playerActiveWar;
             
+            // Research Token Miner
+            const now = Date.now();
+            if (state.research.trees.political.miner > 0 && now - state.research.lastMinerTick >= 30000) {
+                state.research.tokens++;
+                state.research.lastMinerTick = now;
+                notify(`R-Token mined! Total: ${state.research.tokens}`, "success");
+                updateResearchUI();
+            }
+
             const warMultiplier = getWarCostMultiplier(1);
             const displayCost = playerEntity.tileCost * warMultiplier;
             const costEl = document.getElementById('stat-cost');
@@ -3238,13 +3669,11 @@
             
             if (isWar) {
                 transportLabel.innerText = "Air Support";
-                const asCost = (playerEntity.tileCost * CONFIG.WARPLANE_COST_MULT) * warMultiplier;
-                transportCost.innerText = `$${Math.floor(asCost).toLocaleString()}`;
+                transportCost.innerText = `$${Math.floor(getWarplaneCost()).toLocaleString()}`;
                 transportWrapper.className = "text-red-400 animate-pulse";
                 
                 missileWrapper.classList.remove('hidden');
-                const mCost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * warMultiplier;
-                missileCost.innerText = `$${Math.floor(mCost).toLocaleString()}`;
+                missileCost.innerText = `$${Math.floor(getWarMissileCost()).toLocaleString()}`;
                 
                 if (modeMissileBtn) modeMissileBtn.classList.remove('hidden');
             } else {
@@ -3407,8 +3836,13 @@
         }
 
         function rebuildCapital() {
-            const cost = 50000 * Math.pow(1.1, state.ownedCount / 100);
-            if (state.balance < cost) {
+            let cost = 50000 * Math.pow(1.1, state.ownedCount / 100);
+            
+            // Research Discount
+            const discount = getResearchBonus('economic', 'rebuildCost', 10);
+            cost *= (1 - discount);
+
+            if (state.balance !== Infinity && state.balance < cost) {
                 alert("Insufficient balance to rebuild capital.");
                 return;
             }
@@ -3419,7 +3853,9 @@
             if(owned.length === 0) { alert("No owned land to build a capital on!"); return; }
             
             const idx = owned[Math.floor(owned.length / 2)];
-            state.balance -= cost;
+            if (state.balance !== Infinity) {
+                state.balance -= cost;
+            }
             state.tileTypes[idx] = 6;
             state.entities[1].hasCapital = true;
             state.entities[1].capitalPos = { x: idx % CONFIG.COLS, y: Math.floor(idx / CONFIG.COLS) };
@@ -4022,6 +4458,9 @@
                 const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.allies.includes(1) || w.target === 1 || w.targetAllies.includes(1)));
                 if (playerActiveWar) setMode('missile');
             }
+            else if (e.key === '6') setMode('ally-paint');
+            else if (e.key === '7') setMode('team-paint');
+            else if (e.key === '8') setMode('ally-city');
             else if (e.key === '+' || e.key === '=') changeZoom(CONFIG.ZOOM_STEP);
             else if (e.key === '-' || e.key === '_') changeZoom(-CONFIG.ZOOM_STEP);
         });
@@ -4047,6 +4486,9 @@
                 changeZoom(step, e.clientX, e.clientY);
             }
         }, { passive: false });
+
+        // Initialize Research Content
+        setResearchTab('economic');
     </script>
 </body>
 </html>
