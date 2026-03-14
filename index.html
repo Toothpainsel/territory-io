@@ -4512,60 +4512,66 @@
             const e = state.entities[entityIdx];
             if (!e || e.ownedCount === 0) return 0;
 
-            // 1. Territory Factor (0-3.0 points)
-            const territoryScore = Math.min(3.0, e.ownedCount / 5000); 
+            // 1. Territory Factor (Uncapped log scaling)
+            // Base score: 1.0 for 1000 tiles. Log scaling ensures large entities are still compared.
+            const territoryScore = Math.log10(Math.max(1, e.ownedCount)) * 0.8; 
             
-            // 2. Population Factor (0-1.5 points)
-            const popScore = Math.min(1.5, (e.totalPopulation || 0) / 100000); // 100k pop max factor
+            // 2. Population Factor (Uncapped scaling)
+            // 1.0 score for ~100k population.
+            const popScore = (e.totalPopulation || 0) / 100000;
 
-            // 3. Income Factor (0-1.5 points)
-            const incomeScore = Math.min(1.5, (e.totalIncome || 0) / 10000); // $10k income max factor
+            // 3. Income Factor (Uncapped scaling)
+            // 1.0 score for $10k income per tick.
+            const incomeScore = (e.totalIncome || 0) / 10000;
 
-            // 4. City & Development Factor (0-1.5 points)
-            const cityScore = Math.min(1.0, e.cityCount / 20);
-            const devScore = Math.min(0.5, e.ovcd / 8);
+            // 4. City & Development Factor
+            // 1.0 for 20 cities + average level scaling.
+            const cityScore = e.cityCount / 20;
+            const devScore = (e.ovcd || 0) / 8;
             
-            // 5. Wealth Factor (0-0.5 points)
+            // 5. Wealth Factor (Uncapped log scaling)
             let wealthScore = 0;
             if (e.balance === Infinity) {
-                wealthScore = 0.5;
+                wealthScore = 2.0; // "Infinite" wealth bonus
             } else {
-                wealthScore = Math.min(0.5, Math.log10(Math.max(1, e.balance)) / 10);
+                wealthScore = Math.log10(Math.max(1, e.balance)) / 10;
             }
             
-            // 6. Military Factor (0-0.5 points)
-            const warScore = Math.min(0.5, e.warsWon * 0.15);
+            // 6. Military Factor (Uncapped)
+            const warScore = (e.warsWon || 0) * 0.2;
             
-            // 7. Infrastructure (Dams) Factor (0-0.5 points)
-            const damScore = Math.min(0.5, (e.damCount || 0) / 20);
+            // 7. Infrastructure (Dams) Factor (Uncapped)
+            const damScore = (e.damCount || 0) / 10;
 
-            // 8. Diplomacy (Allies) Factor (0-0.5 points)
+            // 8. Diplomacy (Allies) Factor
             let allianceCount = 0;
             state.alliances.forEach(pair => {
                 const parts = pair.split('-');
                 if (parts.includes(entityIdx.toString())) allianceCount++;
             });
-            const allianceScore = Math.min(0.5, allianceCount * 0.15);
+            const allianceScore = allianceCount * 0.25;
 
-            // 9. Research Factor (only for player, 0-0.5 point)
+            // 9. Research & Capabilities Factor
             let researchScore = 0;
             if (entityIdx === 1) {
+                // Real research progress for player
                 const totalLevels = Object.values(state.research.trees).reduce((sum, tree) => {
                     return sum + Object.values(tree).reduce((s, val) => s + val, 0);
                 }, 0);
-                researchScore = Math.min(0.5, totalLevels / 300);
+                researchScore = totalLevels / 150; // 1.0 score for 150 levels
             } else {
-                const diffBonus = { 'ez': 0.05, 'strategic': 0.15, 'hard': 0.3, 'insane': 0.5 };
-                researchScore = diffBonus[e.difficulty] || 0.05;
+                // Difficulty-based capability estimation for bots
+                const diffBonus = { 'ez': 0.1, 'strategic': 0.4, 'hard': 0.8, 'insane': 1.5 };
+                researchScore = diffBonus[e.difficulty] || 0.1;
             }
 
-            // 10. Expense Penalty (up to -1.0 point)
-            const expensePenalty = Math.min(1.0, (e.totalExpense || 0) / 5000);
+            // 10. Efficiency/Expense Penalty (Dynamic)
+            const expensePenalty = (e.totalExpense || 0) / (e.totalIncome || 1);
 
             const total = territoryScore + popScore + incomeScore + cityScore + devScore + wealthScore + warScore + damScore + allianceScore + researchScore - expensePenalty;
             
-            // Normalize to 1-digit 6-decimal (e.g. 0.000000 to 9.999999)
-            return Math.max(0, Math.min(9.999999, total));
+            // Power Index is now an unbounded floating point for accurate comparison
+            return Math.max(0, total);
         }
 
         function updateLeaderboard() {
