@@ -2765,7 +2765,7 @@
                 // Annexation Radius Logic
                 const annexLevel = state.research.trees.military.annexRadius || 0;
                 if (annexLevel > 0) {
-                    const annexRadius = 1 + (annexLevel * 4.23);
+                    const annexRadius = 1 + (annexLevel * 1.033);
                     for (let iy = -annexRadius; iy <= annexRadius; iy++) {
                         for (let ix = -annexRadius; ix <= annexRadius; ix++) {
                             const dist = Math.sqrt(ix*ix + iy*iy);
@@ -2903,7 +2903,7 @@
                 // Annexation Radius Logic
                 const annexLevel = state.research.trees.military.annexRadius || 0;
                 if (annexLevel > 0) {
-                    const annexRadius = 1 + (annexLevel * 4.23);
+                    const annexRadius = 1 + (annexLevel * 1.033);
                     for (let iy = -annexRadius; iy <= annexRadius; iy++) {
                         for (let ix = -annexRadius; ix <= annexRadius; ix++) {
                             const dist = Math.sqrt(ix*ix + iy*iy);
@@ -3317,7 +3317,7 @@
                 
                 const annexLevel = state.research.trees.military.annexRadius || 0;
                 if (annexLevel > 0) {
-                    const annexRadius = 1 + (annexLevel * 4.23);
+                    const annexRadius = 1 + (annexLevel * 1.033);
                     for (let iy = -annexRadius; iy <= annexRadius; iy++) {
                         for (let ix = -annexRadius; ix <= annexRadius; ix++) {
                             const dist = Math.sqrt(ix*ix + iy*iy);
@@ -3963,7 +3963,7 @@
                         ${renderResearchItem('Military', 'warMissile', 'War Missile Discount', 'Levels 1-20: Reduce cost from -1% to -95%', 20, 1)}
                         ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
                         ${renderResearchItem('Military', 'warTileCost', 'War Tile Cost Reduction', 'Levels 1-60: Reduce cost from -10% to -99%', 60, 1)}
-                        ${renderResearchItem('Military', 'annexRadius', 'Annexation Radius', 'Levels 1-30: Increase strike radius from 4 to 128 tiles', 30, 10)}
+                        ${renderResearchItem('Military', 'annexRadius', 'Annexation Radius', 'Levels 1-30: Increase strike radius from 2 to 32 tiles', 30, 10)}
                     </div>
                 `;
             } else if (tab === 'tokens') {
