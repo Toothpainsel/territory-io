@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Territory.io - Expanded World</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/rocket.gif">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -593,7 +594,7 @@
                     <!-- Bar charts will be injected here -->
                 </div>
             </div>
-            <button onclick="closeRankingModal()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+            <button onclick="closeRankingModal()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors" title="Close Rankings">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
             </button>
         </div>
@@ -651,7 +652,7 @@
                 </div>
                 <!-- Other tabs will be handled via JS -->
             </div>
-            <button onclick="closeResearch()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+            <button onclick="closeResearch()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors" title="Close Research">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
             </button>
         </div>
@@ -720,7 +721,7 @@
             </div>
 
             <!-- Footer / Close -->
-            <button onclick="closeManagement()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+            <button onclick="closeManagement()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors" title="Close Management">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
             </button>
         </div>
@@ -2737,28 +2738,6 @@
                     });
                 }
                 claim(tx, ty, true, 1);
-
-                // Annexation Radius Logic
-                const annexLevel = state.research.trees.military.annexRadius || 0;
-                if (annexLevel > 0) {
-                    const annexRadius = 1 + (annexLevel * 4.23);
-                    for (let iy = -annexRadius; iy <= annexRadius; iy++) {
-                        for (let ix = -annexRadius; ix <= annexRadius; ix++) {
-                            const dist = Math.sqrt(ix*ix + iy*iy);
-                            if (dist <= annexRadius) {
-                                const nX = Math.floor(tx + ix);
-                                const nY = Math.floor(ty + iy);
-                                if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
-                                    const nIdx = nY * CONFIG.COLS + nX;
-                                    const nOwner = state.tileOwners[nIdx];
-                                    if (nOwner !== 0 && nOwner !== 1 && (nOwner === activeWar.target || activeWar.targetAllies.includes(nOwner))) {
-                                        claim(nX, nY, true, 1);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
 
                 // Annexation Radius Logic
                 const annexLevel = state.research.trees.military.annexRadius || 0;
