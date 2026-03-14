@@ -3839,7 +3839,7 @@
                 let display = '';
                 
                 switch(mode) {
-                    case 'powerIndex': val = e.powerIndex; display = val.toFixed(4); break;
+                    case 'powerIndex': val = e.powerIndex; display = val.toFixed(6); break;
                     case 'tiles': val = e.ownedCount; display = val.toLocaleString(); break;
                     case 'cities': val = e.cityCount; display = val.toLocaleString(); break;
                     case 'balance': val = e.balance === Infinity ? 999999999999 : e.balance; display = e.balance === Infinity ? 'inf' : `$${Math.floor(val).toLocaleString()}`; break;
@@ -3921,8 +3921,8 @@
             }
 
             const total = territoryScore + cityScore + devScore + wealthScore + warScore + damScore + allianceScore + researchScore;
-            // Normalize to 1-digit 4-decimal (e.g. 0.0000 to 9.9999)
-            return Math.min(9.9999, total);
+            // Normalize to 1-digit 6-decimal (e.g. 0.000000 to 9.999999)
+            return Math.min(9.999999, total);
         }
 
         function updateLeaderboard() {
@@ -3981,7 +3981,7 @@
             // Render
             listEl.innerHTML = leaderboardData.map((item, index) => {
                 const isLeader = maxTiles > 0 && item.ownedCount === maxTiles;
-                const displayValue = item.value.toFixed(4);
+                const displayValue = item.value.toFixed(6);
                 return `
                 <div class="flex justify-between items-center bg-slate-800/30 p-2 rounded-lg border border-white/5 ${item.isPlayer ? 'ring-1 ring-blue-500/50 bg-blue-500/10' : ''}">
                     <div class="flex items-center gap-2 overflow-hidden">
