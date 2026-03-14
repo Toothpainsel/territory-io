@@ -1480,13 +1480,13 @@
             if (ownerIdx === 1) centerCameraOn(sx + 3, sy + 3);
         }
 
-        function getWarCostMultiplier(entityIdx) {
+        function getWarCostMultiplier(entityIdx, ignoreTileResearch = false) {
             const activeWar = state.wars.find(w => w.active && (w.host === entityIdx || w.allies.includes(entityIdx) || w.target === entityIdx || w.targetAllies.includes(entityIdx)));
             if (!activeWar) return 1;
             
             let researchDiscount = 0;
             let warTileDiscount = 0;
-            if (entityIdx === 1) {
+            if (entityIdx === 1 && !ignoreTileResearch) {
                 researchDiscount = getResearchBonus('economic', 'tileCost', 10);
                 // Military Research Discount (Levels 1-60: -10% to -99%)
                 warTileDiscount = getResearchBonus('military', 'warTileCost', 60, 0.1, 0.99);
@@ -2252,12 +2252,12 @@
                     const isReachable = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === 1 || state.alliances.has(`1-${state.tileOwners[n]}`) || state.alliances.has(`${state.tileOwners[n]}-1`)));
                     
                     const isWater = state.tileTypes[idx] === 0;
-                    let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
+                    let baseCost = 0;
                     
                     if (state.planning.assaultType === 'support') {
-                        baseCost = getWarplaneCost() / warMultiplier;
+                        baseCost = getWarplaneCost();
                     } else if (state.planning.assaultType === 'missile') {
-                        baseCost = getWarMissileCost() / warMultiplier;
+                        baseCost = getWarMissileCost();
                     } else if (!isReachable) {
                         // Regular border expansion or other
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
@@ -2266,13 +2266,15 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 50;
+                            baseCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
                         } else {
                             baseCost = Infinity;
                         }
+                    } else {
+                        baseCost = (isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
                     }
 
-                    totalCost += baseCost * warMultiplier;
+                    totalCost += baseCost;
                 });
             });
 
@@ -2338,12 +2340,12 @@
                     const isReachable = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === 1 || state.alliances.has(`1-${state.tileOwners[n]}`) || state.alliances.has(`${state.tileOwners[n]}-1`)));
                     
                     const isWater = state.tileTypes[idx] === 0;
-                    let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
+                    let baseCost = 0;
                     
                     if (assaultType === 'support') {
-                        baseCost = getWarplaneCost() / warMultiplier;
+                        baseCost = getWarplaneCost();
                     } else if (assaultType === 'missile') {
-                        baseCost = getWarMissileCost() / warMultiplier;
+                        baseCost = getWarMissileCost();
                     } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
@@ -2351,12 +2353,14 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 50;
+                            baseCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
                         } else {
                             outOfRange = true;
                         }
+                    } else {
+                        baseCost = (isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
                     }
-                    totalCost += baseCost * warMultiplier;
+                    totalCost += baseCost;
                 });
             });
 
@@ -2401,12 +2405,12 @@
                     const isReachable = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === 1 || state.alliances.has(`1-${state.tileOwners[n]}`) || state.alliances.has(`${state.tileOwners[n]}-1`)));
                     
                     const isWater = state.tileTypes[idx] === 0;
-                    let baseCost = isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost;
+                    let baseCost = 0;
                     
                     if (assaultType === 'support') {
-                        baseCost = getWarplaneCost() / warMultiplier;
+                        baseCost = getWarplaneCost();
                     } else if (assaultType === 'missile') {
-                        baseCost = getWarMissileCost() / warMultiplier;
+                        baseCost = getWarMissileCost();
                     } else if (!isReachable) {
                         const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                         const cx = playerEntity.capitalPos ? playerEntity.capitalPos.x : -1;
@@ -2414,12 +2418,14 @@
                         const dist = (cx !== -1) ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                         
                         if (dist <= 200) {
-                            baseCost = CONFIG.TRANSPORT_COST * 50;
+                            baseCost = (CONFIG.TRANSPORT_COST * 50) * warMultiplier;
                         } else {
                             baseCost = Infinity; 
                         }
+                    } else {
+                        baseCost = (isWater ? (playerEntity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : playerEntity.tileCost) * warMultiplier;
                     }
-                    turnCost += baseCost * warMultiplier;
+                    turnCost += baseCost;
                 });
 
                 if (state.balance < turnCost) {
@@ -2640,11 +2646,28 @@
                             const nY = Math.floor(ty + iy);
                             if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
                                 const nIdx = nY * CONFIG.COLS + nX;
-                                if (state.tileTypes[nIdx] === 5) { // City
-                                    state.cityIndices.delete(nIdx);
-                                    state.tileTypes[nIdx] = 2; // Land
+                                if (state.tileTypes[nIdx] === 5 || state.tileTypes[nIdx] === 6) { // City or Capital
+                                    const isCapital = state.tileTypes[nIdx] === 6;
                                     const owner = state.tileOwners[nIdx];
+                                    
+                                    state.cityIndices.delete(nIdx);
+                                    state.tileTypes[nIdx] = 2; // Revert to regular land
                                     if (owner > 0) state.entities[owner].cityCount--;
+                                    
+                                    if (isCapital && owner > 0) {
+                                        const enemy = state.entities[owner];
+                                        enemy.hasCapital = false;
+                                        enemy.capitalPos = null;
+                                        enemy.paralyzedCycles = 15;
+                                        notify(`${enemy.name}'s Capital has been DESTROYED by Air Support!`, 'war', nX, nY);
+                                        
+                                        // Remove capital label
+                                        const labels = document.querySelectorAll('.capital-label');
+                                        labels.forEach(l => {
+                                            if (l.innerText === enemy.name.toUpperCase()) l.remove();
+                                        });
+                                    }
+
                                     drawTile(nX, nY);
                                     
                                     // Remove labels
@@ -3462,13 +3485,13 @@
         }
 
         function getWarplaneCost() {
-            let cost = (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1);
+            let cost = (state.entities[1].tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(1, true);
             cost *= (1 - getResearchBonus('military', 'warplane', 10));
             return cost;
         }
 
         function getWarMissileCost() {
-            let cost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * getWarCostMultiplier(1);
+            let cost = (CONFIG.TRANSPORT_COST * 50) * CONFIG.WAR_MISSILE_COST_MULT * getWarCostMultiplier(1, true);
             cost *= (1 - getResearchBonus('military', 'warMissile', 20));
             return cost;
         }
