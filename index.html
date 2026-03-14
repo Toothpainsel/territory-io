@@ -562,6 +562,7 @@
                 <div class="space-y-2 flex-1">
                     <button onclick="setResearchTab('economic')" id="tab-res-economic" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all bg-blue-600 text-white shadow-lg">Economic</button>
                     <button onclick="setResearchTab('military')" id="tab-res-military" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Military</button>
+                    <button onclick="setResearchTab('tokens')" id="tab-res-tokens" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Tokens</button>
                     <button onclick="setResearchTab('political')" id="tab-res-political" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Political</button>
                 </div>
                 <div class="mt-auto bg-slate-800/50 p-4 rounded-2xl border border-white/5">
@@ -914,7 +915,8 @@
                 trees: {
                     economic: { tileCost: 0, rebuildCost: 0 },
                     military: { warMissile: 0, warplane: 0 },
-                    political: { miner: 0 }
+                    tokens: { miner: 0 },
+                    political: {}
                 },
                 lastMinerTick: Date.now()
             },
@@ -3476,7 +3478,7 @@
         }
 
         function setResearchTab(tab) {
-            const tabs = ['economic', 'military', 'political'];
+            const tabs = ['economic', 'military', 'tokens', 'political'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-res-${t}`);
                 const content = document.getElementById(`res-content-${t}`);
@@ -3489,7 +3491,6 @@
                 }
             });
             
-            // Render content if not already there (for military/political)
             renderResearchContent(tab);
         }
 
@@ -3504,8 +3505,8 @@
                         <p class="text-slate-400 text-sm">Improve your empire's fiscal efficiency and expansion costs.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 mt-8">
-                        ${renderResearchItem('Economic', 'tileCost', 'Tile Cost Reduction', 'Reduce cost from -1% to -95%', 10)}
-                        ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Reduce cost from -1% to -95%', 10)}
+                        ${renderResearchItem('Economic', 'tileCost', 'Tile Cost Reduction', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
+                        ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
                     </div>
                 `;
             } else if (tab === 'military') {
@@ -3519,14 +3520,24 @@
                         ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
                     </div>
                 `;
-            } else if (tab === 'political') {
+            } else if (tab === 'tokens') {
                 html = `
                     <div>
-                        <h3 class="text-2xl font-bold text-white mb-2">Political Research</h3>
-                        <p class="text-slate-400 text-sm">Optimize token mining and internal stability.</p>
+                        <h3 class="text-2xl font-bold text-white mb-2">Research Token Mining</h3>
+                        <p class="text-slate-400 text-sm">Optimize token generation through advanced computational mining.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 mt-8">
-                        ${renderResearchItem('Political', 'miner', 'R-Token Miner', 'Levels 1-50: +1 token every 30s', 50)}
+                        ${renderResearchItem('Tokens', 'miner', 'R-Token Miner', 'Levels 1-50: Increases R-TOKENS mined every 30s (+1 per level)', 50)}
+                    </div>
+                `;
+            } else if (tab === 'political') {
+                html = `
+                    <div class="flex flex-col items-center justify-center h-full text-center">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#475569" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm12-88a12,12,0,1,1-12-12A12,12,0,0,1,140,128Z"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2 uppercase italic tracking-tighter">Political Research</h3>
+                        <p class="text-slate-500 font-bold uppercase text-xs tracking-widest">Coming Soon</p>
                     </div>
                 `;
             }
@@ -3640,10 +3651,12 @@
             
             // Research Token Miner
             const now = Date.now();
-            if (state.research.trees.political.miner > 0 && now - state.research.lastMinerTick >= 30000) {
-                state.research.tokens++;
+            const minerLevel = state.research.trees.tokens.miner;
+            if (minerLevel > 0 && now - state.research.lastMinerTick >= 30000) {
+                const tokensMined = minerLevel;
+                state.research.tokens += tokensMined;
                 state.research.lastMinerTick = now;
-                notify(`R-Token mined! Total: ${state.research.tokens}`, "success");
+                notify(`${tokensMined} R-Token${tokensMined > 1 ? 's' : ''} mined! Total: ${state.research.tokens}`, "success");
                 updateResearchUI();
             }
 
