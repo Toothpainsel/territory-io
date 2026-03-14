@@ -3391,7 +3391,8 @@
 
                 // City Population Increase & Investment Ticks
                 for (const idx of state.cityIndices) {
-                    if (state.tileOwners[idx] === 1) {
+                    const owner = state.tileOwners[idx];
+                    if (owner > 0) {
                         const level = state.cityLevels[idx];
                         // Pop increase: 10 + (level * 5) per tick
                         const increase = 10 + (level * 5);
@@ -3774,12 +3775,12 @@
                     </div>
                 `;
             } else if (tab === 'progress') {
-                const caps = {
-                    base: { paintCapacity: 200 },
-                    economic: { tileCost: 10, rebuildCost: 10, maxBalance: 100 },
-                    military: { warMissile: 20, warplane: 10, warTileCost: 60 },
-                    tokens: { miner: 50 }
-                };
+                 const caps = {
+                     base: { paintCapacity: 200 },
+                     economic: { tileCost: 10, rebuildCost: 10, maxBalance: 100, warPenalty: 30 },
+                     military: { warMissile: 20, warplane: 10, warTileCost: 60 },
+                     tokens: { miner: 50 }
+                 };
                 
                 let totalCurrent = 0, totalMax = 0;
                 const trees = Object.keys(caps).map(treeName => {
@@ -4323,50 +4324,60 @@
             const e = state.entities[entityIdx];
             if (!e || e.ownedCount === 0) return 0;
 
-            // 1. Territory Factor (0-3.5 points)
-            const territoryScore = Math.min(3.5, e.ownedCount / 5000); 
+            // 1. Territory Factor (0-3.0 points)
+            const territoryScore = Math.min(3.0, e.ownedCount / 5000); 
             
-            // 2. City & Development Factor (0-2 points)
-            const cityScore = Math.min(1.5, e.cityCount / 20);
+            // 2. Population Factor (0-1.5 points)
+            const popScore = Math.min(1.5, (e.totalPopulation || 0) / 100000); // 100k pop max factor
+
+            // 3. Income Factor (0-1.5 points)
+            const incomeScore = Math.min(1.5, (e.totalIncome || 0) / 10000); // $10k income max factor
+
+            // 4. City & Development Factor (0-1.5 points)
+            const cityScore = Math.min(1.0, e.cityCount / 20);
             const devScore = Math.min(0.5, e.ovcd / 8);
             
-            // 3. Wealth Factor (0-1 point)
+            // 5. Wealth Factor (0-0.5 points)
             let wealthScore = 0;
             if (e.balance === Infinity) {
-                wealthScore = 1.0;
+                wealthScore = 0.5;
             } else {
-                wealthScore = Math.min(1.0, Math.log10(Math.max(1, e.balance)) / 10);
+                wealthScore = Math.min(0.5, Math.log10(Math.max(1, e.balance)) / 10);
             }
             
-            // 4. Military Factor (0-1 point)
-            const warScore = Math.min(1.0, e.warsWon * 0.15);
+            // 6. Military Factor (0-0.5 points)
+            const warScore = Math.min(0.5, e.warsWon * 0.15);
             
-            // 5. Infrastructure (Dams) Factor (0-1 point)
-            const damScore = Math.min(1.0, (e.damCount || 0) / 20);
+            // 7. Infrastructure (Dams) Factor (0-0.5 points)
+            const damScore = Math.min(0.5, (e.damCount || 0) / 20);
 
-            // 6. Diplomacy (Allies) Factor (0-1 point)
+            // 8. Diplomacy (Allies) Factor (0-0.5 points)
             let allianceCount = 0;
             state.alliances.forEach(pair => {
                 const parts = pair.split('-');
                 if (parts.includes(entityIdx.toString())) allianceCount++;
             });
-            const allianceScore = Math.min(1.0, allianceCount * 0.25);
+            const allianceScore = Math.min(0.5, allianceCount * 0.15);
 
-            // 7. Research Factor (only for player, 0-0.5 point)
+            // 9. Research Factor (only for player, 0-0.5 point)
             let researchScore = 0;
             if (entityIdx === 1) {
                 const totalLevels = Object.values(state.research.trees).reduce((sum, tree) => {
                     return sum + Object.values(tree).reduce((s, val) => s + val, 0);
                 }, 0);
-                researchScore = Math.min(0.5, totalLevels / 200);
+                researchScore = Math.min(0.5, totalLevels / 300);
             } else {
                 const diffBonus = { 'ez': 0.05, 'strategic': 0.15, 'hard': 0.3, 'insane': 0.5 };
                 researchScore = diffBonus[e.difficulty] || 0.05;
             }
 
-            const total = territoryScore + cityScore + devScore + wealthScore + warScore + damScore + allianceScore + researchScore;
+            // 10. Expense Penalty (up to -1.0 point)
+            const expensePenalty = Math.min(1.0, (e.totalExpense || 0) / 5000);
+
+            const total = territoryScore + popScore + incomeScore + cityScore + devScore + wealthScore + warScore + damScore + allianceScore + researchScore - expensePenalty;
+            
             // Normalize to 1-digit 6-decimal (e.g. 0.000000 to 9.999999)
-            return Math.min(9.999999, total);
+            return Math.max(0, Math.min(9.999999, total));
         }
 
         function updateLeaderboard() {
@@ -4379,8 +4390,13 @@
             state.entities[1].cityCount = state.cityCount;
             state.entities[1].damCount = state.damCount;
 
-            // Reset OVCD for a fresh calculation pass
-            state.entities.forEach(e => e.tempTotalLevel = 0);
+            // Reset OVCD and Population for a fresh calculation pass
+            state.entities.forEach(e => {
+                e.tempTotalLevel = 0;
+                e.totalPopulation = 0;
+                e.totalIncome = 0;
+                e.totalExpense = 0;
+            });
             const cityCounts = new Uint8Array(state.entities.length);
 
             // One-pass calculation for all city-related stats
@@ -4388,15 +4404,51 @@
                 const owner = state.tileOwners[idx];
                 if (owner > 0) {
                     state.entities[owner].tempTotalLevel += state.cityLevels[idx] || 0;
+                    state.entities[owner].totalPopulation += state.cityPopulations[idx] || 0;
                     cityCounts[owner]++;
                 }
             });
 
-            // Update final OVCD values
+            // Update final values and calculate financial metrics
             state.entities.forEach((entity, eIdx) => {
                 if (eIdx === 0) return;
+                
+                // 1. Development (OVCD)
                 entity.ovcd = cityCounts[eIdx] > 0 ? parseFloat((entity.tempTotalLevel / cityCounts[eIdx]).toFixed(1)) : 0;
-                // Calculate Power Index
+                
+                // 2. Financial Metrics (Income/Expense)
+                const isPlayer = eIdx === 1;
+                const activeWar = state.wars.find(w => w.active && (w.host === eIdx || w.target === eIdx || w.allies.includes(eIdx) || w.targetAllies.includes(eIdx)));
+                
+                // Income
+                const baseIncome = entity.ownedCount * (CONFIG.VAL_PER_TILE / 10);
+                const cityBonus = (entity.cityCount * CONFIG.CITY_BONUS);
+                const devIncomeBonus = baseIncome * (entity.tempTotalLevel * 0.05);
+                
+                let investmentBonus = 0;
+                if (isPlayer) {
+                    const investmentMultiplier = state.investments.reduce((sum, inv) => sum + inv.bonus, 0);
+                    investmentBonus = (baseIncome + cityBonus + devIncomeBonus) * investmentMultiplier;
+                }
+                
+                entity.totalIncome = baseIncome + cityBonus + devIncomeBonus + investmentBonus;
+                
+                // Expense (War Penalty)
+                if (activeWar) {
+                    const basePenaltyRate = 0.005; // 0.5%
+                    let resPenaltyDiscount = 0;
+                    if (isPlayer) {
+                        resPenaltyDiscount = getResearchBonus('economic', 'warPenalty', 30, 0.01, 0.98);
+                    } else {
+                        // Bots get some scaling reduction based on difficulty
+                        const diffBonus = { 'ez': 0.1, 'strategic': 0.3, 'hard': 0.5, 'insane': 0.7 };
+                        resPenaltyDiscount = diffBonus[entity.difficulty] || 0.1;
+                    }
+                    const finalPenaltyRate = basePenaltyRate * (1 - resPenaltyDiscount);
+                    entity.totalExpense = entity.balance * finalPenaltyRate;
+                }
+
+                // 3. Calculate Power Index
                 entity.powerIndex = calculatePowerIndex(eIdx);
             });
 
