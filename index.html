@@ -1039,7 +1039,7 @@
                 trees: {
                     base: { paintCapacity: 0 },
                     economic: { tileCost: 0, rebuildCost: 0, maxBalance: 0, warPenalty: 0 },
-                    military: { warMissile: 0, warplane: 0, warTileCost: 0 },
+                    military: { warMissile: 0, warplane: 0, warTileCost: 0, annexRadius: 0 },
                     tokens: { miner: 0 },
                     political: {}
                 },
@@ -2521,6 +2521,9 @@
             
             // Execute turns sequentially (simulated)
             let currentTurn = 0;
+            const paintLevel = state.research.trees.base.paintCapacity || 0;
+            const maxTilesPerClick = 1 + paintLevel;
+
             const executeTurn = () => {
                 // Stop if war is no longer active
                 const activeWar = state.wars.find(w => w.id === war.id && w.active);
@@ -2538,13 +2541,17 @@
                 const tiles = state.planning.turns[currentTurn];
                 const playerEntity = state.entities[1];
                 
+                // Apply tile capacity limit to the turn
+                const eligibleTiles = tiles.slice(0, maxTilesPerClick);
+                
                 // Per-turn balance check
                 let turnCost = 0;
-                tiles.forEach(idx => {
+                eligibleTiles.forEach(idx => {
                     const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
+                    // Fix: Check for shared border with YOU specifically
                     const isReachable = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === 1 || state.alliances.has(`1-${state.tileOwners[n]}`) || state.alliances.has(`${state.tileOwners[n]}-1`)));
                     
-                    const isWater = state.tileTypes[idx] === 0;
+                    const isWater = state.tileTypes[idx] === 0 || state.tileTypes[idx] === 3;
                     let baseCost = 0;
                     
                     if (assaultType === 'support') {
@@ -2574,7 +2581,7 @@
                     return;
                 }
 
-                tiles.forEach(idx => {
+                eligibleTiles.forEach(idx => {
                     const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
                     const oldOwner = state.tileOwners[idx];
                     const type = state.tileTypes[idx];
@@ -2730,6 +2737,51 @@
                     });
                 }
                 claim(tx, ty, true, 1);
+
+                // Annexation Radius Logic
+                const annexLevel = state.research.trees.military.annexRadius || 0;
+                if (annexLevel > 0) {
+                    const annexRadius = 1 + (annexLevel * 4.23);
+                    for (let iy = -annexRadius; iy <= annexRadius; iy++) {
+                        for (let ix = -annexRadius; ix <= annexRadius; ix++) {
+                            const dist = Math.sqrt(ix*ix + iy*iy);
+                            if (dist <= annexRadius) {
+                                const nX = Math.floor(tx + ix);
+                                const nY = Math.floor(ty + iy);
+                                if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
+                                    const nIdx = nY * CONFIG.COLS + nX;
+                                    const nOwner = state.tileOwners[nIdx];
+                                    if (nOwner !== 0 && nOwner !== 1 && (nOwner === activeWar.target || activeWar.targetAllies.includes(nOwner))) {
+                                        claim(nX, nY, true, 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Annexation Radius Logic
+                const annexLevel = state.research.trees.military.annexRadius || 0;
+                if (annexLevel > 0) {
+                    const annexRadius = 1 + (annexLevel * 4.23);
+                    for (let iy = -annexRadius; iy <= annexRadius; iy++) {
+                        for (let ix = -annexRadius; ix <= annexRadius; ix++) {
+                            const dist = Math.sqrt(ix*ix + iy*iy);
+                            if (dist <= annexRadius) {
+                                const nX = Math.floor(tx + ix);
+                                const nY = Math.floor(ty + iy);
+                                if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
+                                    const nIdx = nY * CONFIG.COLS + nX;
+                                    const nOwner = state.tileOwners[nIdx];
+                                    if (nOwner !== 0 && nOwner !== 1 && (nOwner === activeWar.target || activeWar.targetAllies.includes(nOwner))) {
+                                        claim(nX, nY, true, 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 drawTile(tx, ty);
             }, 1000);
         }
@@ -3850,6 +3902,7 @@
                         ${renderResearchItem('Military', 'warMissile', 'War Missile Discount', 'Levels 1-20: Reduce cost from -1% to -95%', 20, 1)}
                         ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
                         ${renderResearchItem('Military', 'warTileCost', 'War Tile Cost Reduction', 'Levels 1-60: Reduce cost from -10% to -99%', 60, 1)}
+                        ${renderResearchItem('Military', 'annexRadius', 'Annexation Radius', 'Levels 1-30: Increase strike radius from 4 to 128 tiles', 30, 10)}
                     </div>
                 `;
             } else if (tab === 'tokens') {
@@ -3876,7 +3929,7 @@
                  const caps = {
                      base: { paintCapacity: 200 },
                      economic: { tileCost: 10, rebuildCost: 10, maxBalance: 100, warPenalty: 30 },
-                     military: { warMissile: 20, warplane: 10, warTileCost: 60 },
+                     military: { warMissile: 20, warplane: 10, warTileCost: 60, annexRadius: 30 },
                      tokens: { miner: 50 }
                  };
                 
