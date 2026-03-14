@@ -1497,6 +1497,20 @@
             }
         }
 
+        function drawRegion(minX, minY, maxX, maxY) {
+            // Clamp to map boundaries
+            minX = Math.max(0, Math.floor(minX));
+            minY = Math.max(0, Math.floor(minY));
+            maxX = Math.min(CONFIG.COLS - 1, Math.ceil(maxX));
+            maxY = Math.min(CONFIG.ROWS - 1, Math.ceil(maxY));
+
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    drawTile(x, y);
+                }
+            }
+        }
+
         function generateWorld() {
             ctx.fillStyle = COLORS.LAND;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1560,7 +1574,7 @@
                     const ty = sy + y;
                     const idx = ty * CONFIG.COLS + tx;
                     if (state.tileTypes[idx] === 0) state.tileTypes[idx] = 1;
-                    claim(tx, ty, true, ownerIdx);
+                    claim(tx, ty, true, ownerIdx, true);
                     if (x === 3 && y === 3) {
                         state.tileTypes[idx] = 6;
                         entity.hasCapital = true;
@@ -1579,9 +1593,9 @@
                         if (ownerIdx !== 1) capLabel.style.borderColor = entity.color;
                         container.appendChild(capLabel);
                     }
-                    drawTile(tx, ty);
                 }
             }
+            drawRegion(sx, sy, sx + 5, sy + 5);
             if (ownerIdx === 1) centerCameraOn(sx + 3, sy + 3);
         }
 
@@ -1616,7 +1630,7 @@
             return 100 * (1 - researchDiscount) * (1 - warTileDiscount);
         }
 
-        function claim(x, y, free = false, ownerIdx = 1) {
+        function claim(x, y, free = false, ownerIdx = 1, suppressDraw = false) {
             const idx = y * CONFIG.COLS + x;
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
             
@@ -1676,14 +1690,14 @@
             }
 
             // Update borders (rre5)
-            updateTileBorder(x, y);
+            updateTileBorder(x, y, suppressDraw);
             const neighbors = [
                 {x: x-1, y: y}, {x: x+1, y: y}, {x: x, y: y-1}, {x: x, y: y+1}
             ];
             neighbors.forEach(n => {
                 if (n.x >= 0 && n.x < CONFIG.COLS && n.y >= 0 && n.y < CONFIG.ROWS) {
                     if (state.tileOwners[n.y * CONFIG.COLS + n.x] !== 0) {
-                        updateTileBorder(n.x, n.y);
+                        updateTileBorder(n.x, n.y, suppressDraw);
                     }
                 }
             });
@@ -1701,7 +1715,7 @@
             if (ownerIdx === 1) updateLabel();
         }
 
-        function updateTileBorder(x, y) {
+        function updateTileBorder(x, y, suppressDraw = false) {
             const idx = y * CONFIG.COLS + x;
             const ownerIdx = state.tileOwners[idx];
             if (ownerIdx === 0) return;
@@ -1727,7 +1741,7 @@
             } else {
                 state.tileFlags[idx] &= ~16; // Clear rre5 bit
             }
-            drawTile(x, y);
+            if (!suppressDraw) drawTile(x, y);
         }
 
         function checkForDams() {
@@ -1984,12 +1998,15 @@
                                 const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
                                 const tHasOwnedNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                                 if (tHasOwnedNeighbor) {
-                                    claim(tx, ty, false, 1);
+                                    claim(tx, ty, false, 1, true);
                                     tilesClaimed++;
                                 }
                             }
                         }
                         if (tilesClaimed >= maxTiles) break;
+                    }
+                    if (tilesClaimed > 0) {
+                        drawRegion(x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
                     }
                 } else {
                     // Shared Paint logic
@@ -2021,13 +2038,16 @@
                                         const tHasPlayerNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                                         
                                         if (tHasAllyNeighbor || tHasPlayerNeighbor) {
-                                            claim(tx, ty, false, allyIdx);
+                                            claim(tx, ty, false, allyIdx, true);
                                             state.sharedOwnership[tIdx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
                                             tilesClaimed++;
                                         }
                                     }
                                 }
                                 if (tilesClaimed >= maxTiles) break;
+                            }
+                            if (tilesClaimed > 0) {
+                                drawRegion(x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
                             }
                         }
                     }
@@ -2621,7 +2641,8 @@
                                 }
                             }
 
-                            claim(x, y, true, 1); 
+                            claim(x, y, true, 1, true); 
+                            drawTile(x, y);
                             
                             // Rocket Visual
                             const angle = Math.atan2(y - cy, x - cx) * (180 / Math.PI);
@@ -2737,7 +2758,7 @@
                         }
                     });
                 }
-                claim(tx, ty, true, 1);
+                claim(tx, ty, true, 1, true);
 
                 // Annexation Radius Logic
                 const annexLevel = state.research.trees.military.annexRadius || 0;
@@ -2753,15 +2774,16 @@
                                     const nIdx = nY * CONFIG.COLS + nX;
                                     const nOwner = state.tileOwners[nIdx];
                                     if (nOwner !== 0 && nOwner !== 1 && (nOwner === activeWar.target || activeWar.targetAllies.includes(nOwner))) {
-                                        claim(nX, nY, true, 1);
+                                        claim(nX, nY, true, 1, true);
                                     }
                                 }
                             }
                         }
                     }
+                    drawRegion(tx - annexRadius - 1, ty - annexRadius - 1, tx + annexRadius + 1, ty + annexRadius + 1);
+                } else {
+                    drawTile(tx, ty);
                 }
-
-                drawTile(tx, ty);
             }, 1000);
         }
 
@@ -2874,7 +2896,32 @@
                     }
                 }
                 
-                claim(tx, ty, true, 1);
+                claim(tx, ty, true, 1, true);
+
+                // Annexation Radius Logic
+                const annexLevel = state.research.trees.military.annexRadius || 0;
+                if (annexLevel > 0) {
+                    const annexRadius = 1 + (annexLevel * 4.23);
+                    for (let iy = -annexRadius; iy <= annexRadius; iy++) {
+                        for (let ix = -annexRadius; ix <= annexRadius; ix++) {
+                            const dist = Math.sqrt(ix*ix + iy*iy);
+                            if (dist <= annexRadius) {
+                                const nX = Math.floor(tx + ix);
+                                const nY = Math.floor(ty + iy);
+                                if (nX >= 0 && nX < CONFIG.COLS && nY >= 0 && nY < CONFIG.ROWS) {
+                                    const nIdx = nY * CONFIG.COLS + nX;
+                                    const nOwner = state.tileOwners[nIdx];
+                                    if (nOwner !== 0 && nOwner !== 1 && (nOwner === activeWar.target || activeWar.targetAllies.includes(nOwner))) {
+                                        claim(nX, nY, true, 1, true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    drawRegion(tx - annexRadius - 1, ty - annexRadius - 1, tx + annexRadius + 1, ty + annexRadius + 1);
+                } else {
+                    drawTile(tx, ty);
+                }
 
                 // Return to base
                 setTimeout(() => {
@@ -5117,10 +5164,8 @@
             if (isAllyOnly && type === 'white') {
                 notify(`You have left the war via White Peace.`, 'success');
                 
-                // Revert only tiles captured BY the player (from the other side)
-                // If player is on host side, they captured from target side (target + targetAllies)
-                // If player is on target side, they captured from host side (host + hostAllies)
-                
+                let minX = CONFIG.COLS, minY = CONFIG.ROWS, maxX = 0, maxY = 0;
+
                 const myCaptures = (playerOnHostSide ? war.capturedByHost : war.capturedByTarget).filter(c => state.tileOwners[c.idx] === 1);
                 myCaptures.forEach(c => {
                     const x = c.idx % CONFIG.COLS, y = Math.floor(c.idx / CONFIG.COLS);
@@ -5135,8 +5180,10 @@
                     }
                     
                     state.tileOwners[c.idx] = originalOwner;
-                    updateTileBorder(x, y);
-                    drawTile(x, y);
+                    updateTileBorder(x, y, true);
+                    
+                    minX = Math.min(minX, x); minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
                 });
 
                 // Revert only tiles lost BY the player (to the other side)
@@ -5157,9 +5204,13 @@
                     state.ownedCount++;
                     
                     state.tileOwners[c.idx] = 1;
-                    updateTileBorder(x, y);
-                    drawTile(x, y);
+                    updateTileBorder(x, y, true);
+
+                    minX = Math.min(minX, x); minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
                 });
+                
+                if (maxX >= minX) drawRegion(minX - 1, minY - 1, maxX + 1, maxY + 1);
                 
                 // Clean up war records
                 war.capturedByHost = war.capturedByHost.filter(c => state.tileOwners[c.idx] !== 1 && c.originalOwner !== 1);
@@ -5215,6 +5266,8 @@
             if (type === 'white') {
                 notify(`WHITE PEACE: Original borders restored`, 'success');
                 
+                let minX = CONFIG.COLS, minY = CONFIG.ROWS, maxX = 0, maxY = 0;
+
                 // Revert Host Captures
                 war.capturedByHost.forEach(c => {
                     const x = c.idx % CONFIG.COLS, y = Math.floor(c.idx / CONFIG.COLS);
@@ -5234,8 +5287,10 @@
                     }
 
                     state.tileOwners[c.idx] = originalOwner;
-                    updateTileBorder(x, y);
-                    drawTile(x, y);
+                    updateTileBorder(x, y, true);
+                    
+                    minX = Math.min(minX, x); minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
                 });
                 
                 // Revert Target Captures
@@ -5257,9 +5312,13 @@
                     }
 
                     state.tileOwners[c.idx] = originalOwner;
-                    updateTileBorder(x, y);
-                    drawTile(x, y);
+                    updateTileBorder(x, y, true);
+
+                    minX = Math.min(minX, x); minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
                 });
+
+                if (maxX >= minX) drawRegion(minX - 1, minY - 1, maxX + 1, maxY + 1);
 
                 checkForDams();
                 endWar(war.id);
