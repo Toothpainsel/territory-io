@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Territory.io - Expanded World</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/gif" href="assets/rocket.gif">
     <link rel="apple-touch-icon" href="assets/rocket.gif">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -1948,8 +1949,9 @@
                 const isEnemy = ownerIdx !== 0 && ownerIdx !== 1 && (ownerIdx === war.target || war.targetAllies.includes(ownerIdx));
                 if (isEnemy && type !== 4 && !state.planning.turns[state.planning.activeTurn].includes(idx)) {
                     // Check distance from capital for Air Support
-                    const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
-                    const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+                    const cx = state.entities[1].capitalPos ? state.entities[1].capitalPos.x : -1;
+                    const cy = state.entities[1].capitalPos ? state.entities[1].capitalPos.y : -1;
+                    const dist = cx !== -1 ? Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) : 999;
                     
                     // Check if reachable via border
                     const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
@@ -3247,6 +3249,11 @@
                     return;
                 }
                 
+                if (!state.entities[1].hasCapital) {
+                    notify("You must have a capital to launch Air Support!", "error");
+                    return;
+                }
+                
                 const cx = state.entities[1].capitalPos.x, cy = state.entities[1].capitalPos.y;
                 const tx = targetIdx % CONFIG.COLS, ty = Math.floor(targetIdx / CONFIG.COLS);
                 
@@ -3393,7 +3400,7 @@
                             if (botTiles > playerTiles * 1.5 && Math.random() < betrayalChance) {
                                 state.alliances.delete(`1-${idx}`);
                                 state.alliances.delete(`${idx}-1`);
-                                notify(`${bot.name} has BETRAYED you! Alliance broken!`, 'error', bot.capitalPos.x, bot.capitalPos.y);
+                                notify(`${bot.name} has BETRAYED you! Alliance broken!`, 'error', bot.capitalPos ? bot.capitalPos.x : null, bot.capitalPos ? bot.capitalPos.y : null);
                                 
                                 // Bot seizes shared tiles because bot broke the alliance
                                 Object.keys(state.sharedOwnership).forEach(tileIdx => {
@@ -3464,7 +3471,8 @@
                                 war.initialTiles[war.target] = state.entities[war.target].ownedCount;
                                 war.allies.forEach(aIdx => war.initialTiles[aIdx] = state.entities[aIdx].ownedCount);
 
-                                notify(`WAR DECLARED! ${state.entities[war.host].name} vs ${state.entities[war.target].name}`, 'war', state.entities[war.target].capitalPos.x, state.entities[war.target].capitalPos.y);
+                                const targetEntity = state.entities[war.target];
+                                notify(`WAR DECLARED! ${state.entities[war.host].name} vs ${targetEntity.name}`, 'war', targetEntity.capitalPos ? targetEntity.capitalPos.x : null, targetEntity.capitalPos ? targetEntity.capitalPos.y : null);
                             }
                         }
                         
@@ -5520,7 +5528,7 @@
             else if (e.key === '-' || e.key === '_') changeZoom(-CONFIG.ZOOM_STEP);
             
             // UI Toggles
-            else if (e.key.toLowerCase() === 'p') {
+            else if (e.key && e.key.toLowerCase() === 'p') {
                 const pie = document.getElementById('team-pie-container');
                 if (state.gameMode === 'team') {
                     pie.style.display = pie.style.display === 'none' ? 'block' : 'none';
