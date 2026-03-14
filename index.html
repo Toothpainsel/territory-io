@@ -593,6 +593,7 @@
             <div class="w-64 bg-slate-950/50 border-r border-slate-800 p-6 flex flex-col">
                 <h2 class="text-xl font-black text-white italic mb-8">RESEARCH</h2>
                 <div class="space-y-2 flex-1">
+                    <button onclick="setResearchTab('base')" id="tab-res-base" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Base</button>
                     <button onclick="setResearchTab('economic')" id="tab-res-economic" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all bg-blue-600 text-white shadow-lg">Economic</button>
                     <button onclick="setResearchTab('military')" id="tab-res-military" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Military</button>
                     <button onclick="setResearchTab('tokens')" id="tab-res-tokens" class="w-full text-left p-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-500 hover:bg-slate-800">Tokens</button>
@@ -941,6 +942,7 @@
             research: {
                 tokens: 5,
                 trees: {
+                    base: { paintCapacity: 0 },
                     economic: { tileCost: 0, rebuildCost: 0, maxBalance: 0 },
                     military: { warMissile: 0, warplane: 0, warTileCost: 0 },
                     tokens: { miner: 0 },
@@ -1866,16 +1868,30 @@
                 const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
                 const hasOwnedNeighbor = neighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                 
+                const paintCapacity = 1 + (state.research.trees.base.paintCapacity || 0);
+                const radius = Math.floor(Math.sqrt(paintCapacity) / 2);
+
                 if (state.mode === 'paint') {
-                    if (ownerIdx === 0 && hasOwnedNeighbor) claim(x, y, false, 1);
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const tx = x + dx, ty = y + dy;
+                            if (tx < 0 || tx >= CONFIG.COLS || ty < 0 || ty >= CONFIG.ROWS) continue;
+                            const tIdx = ty * CONFIG.COLS + tx;
+                            if (state.tileOwners[tIdx] === 0) {
+                                // For the center tile, we check neighbor. For others, we just allow it if the center was valid or if they have a neighbor.
+                                // To keep it simple and feel like a brush:
+                                const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
+                                const tHasOwnedNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
+                                if (tHasOwnedNeighbor) claim(tx, ty, false, 1);
+                            }
+                        }
+                    }
                 } else {
                     // Shared Paint logic
-                    const targetOwner = (state.mode === 'ally-paint') ? ownerIdx : ownerIdx; // Should be used on unowned tiles next to ally too?
-                    // Let's allow painting unowned tiles FOR ally too if next to us or them
                     const hasAllyNeighbor = neighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === ownerIdx);
                     
                     if (ownerIdx === 0 && (hasOwnedNeighbor || hasAllyNeighbor)) {
-                        // Find which ally to paint for (simplification: first found neighbor ally)
+                        // Find which ally to paint for
                         let allyIdx = 0;
                         for (let n of neighbors) {
                             if (n >= 0 && n < state.tileTypes.length) {
@@ -1887,8 +1903,23 @@
                             }
                         }
                         if (allyIdx > 0) {
-                            claim(x, y, false, allyIdx);
-                            state.sharedOwnership[idx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
+                            for (let dy = -radius; dy <= radius; dy++) {
+                                for (let dx = -radius; dx <= radius; dx++) {
+                                    const tx = x + dx, ty = y + dy;
+                                    if (tx < 0 || tx >= CONFIG.COLS || ty < 0 || ty >= CONFIG.ROWS) continue;
+                                    const tIdx = ty * CONFIG.COLS + tx;
+                                    if (state.tileOwners[tIdx] === 0) {
+                                        const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
+                                        const tHasAllyNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === allyIdx);
+                                        const tHasPlayerNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
+                                        
+                                        if (tHasAllyNeighbor || tHasPlayerNeighbor) {
+                                            claim(tx, ty, false, allyIdx);
+                                            state.sharedOwnership[tIdx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -3539,7 +3570,7 @@
         }
 
         function setResearchTab(tab) {
-            const tabs = ['economic', 'military', 'tokens', 'political'];
+            const tabs = ['base', 'economic', 'military', 'tokens', 'political'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-res-${t}`);
                 const content = document.getElementById(`res-content-${t}`);
@@ -3559,16 +3590,26 @@
             const container = document.querySelector('#research-modal .flex-1.p-10.overflow-y-auto');
             if (!container) return;
             let html = '';
-            if (tab === 'economic') {
+            if (tab === 'base') {
+                html = `
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Base Research</h3>
+                        <p class="text-slate-400 text-sm">Fundamental improvements to your operational efficiency.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-8">
+                        ${renderResearchItem('Base', 'paintCapacity', 'Increase Paint Capacity', 'Levels 1-200: +1 tile capacity every level', 200, 100)}
+                    </div>
+                `;
+            } else if (tab === 'economic') {
                 html = `
                     <div>
                         <h3 class="text-2xl font-bold text-white mb-2">Economic Research</h3>
                         <p class="text-slate-400 text-sm">Improve your empire's fiscal efficiency and expansion costs.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 mt-8">
-                        ${renderResearchItem('Economic', 'tileCost', 'Tile Cost Reduction', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
-                        ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
-                        ${renderResearchItem('Economic', 'maxBalance', 'Increase Max Balance', 'Levels 1-100: +50% to +10000% capacity', 100)}
+                        ${renderResearchItem('Economic', 'tileCost', 'Tile Cost Reduction', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
+                        ${renderResearchItem('Economic', 'rebuildCost', 'Rebuild Capital Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
+                        ${renderResearchItem('Economic', 'maxBalance', 'Increase Max Balance', 'Levels 1-100: +50% to +10000% capacity', 100, 1)}
                     </div>
                 `;
             } else if (tab === 'military') {
@@ -3578,9 +3619,9 @@
                         <p class="text-slate-400 text-sm">Enhance your offensive capabilities and reduce weapon costs.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 mt-8">
-                        ${renderResearchItem('Military', 'warMissile', 'War Missile Discount', 'Levels 1-20: Reduce cost from -1% to -95%', 20)}
-                        ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10)}
-                        ${renderResearchItem('Military', 'warTileCost', 'War Tile Cost Reduction', 'Levels 1-60: Reduce cost from -10% to -99%', 60)}
+                        ${renderResearchItem('Military', 'warMissile', 'War Missile Discount', 'Levels 1-20: Reduce cost from -1% to -95%', 20, 1)}
+                        ${renderResearchItem('Military', 'warplane', 'Warplane Discount', 'Levels 1-10: Reduce cost from -1% to -95%', 10, 1)}
+                        ${renderResearchItem('Military', 'warTileCost', 'War Tile Cost Reduction', 'Levels 1-60: Reduce cost from -10% to -99%', 60, 1)}
                     </div>
                 `;
             } else if (tab === 'tokens') {
@@ -3590,7 +3631,7 @@
                         <p class="text-slate-400 text-sm">Optimize token generation through advanced computational mining.</p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 mt-8">
-                        ${renderResearchItem('Tokens', 'miner', 'R-Token Miner', 'Levels 1-50: Increases R-TOKENS mined every 30s (+1 per level)', 50)}
+                        ${renderResearchItem('Tokens', 'miner', 'R-Token Miner', 'Levels 1-50: Increases R-TOKENS mined every 30s (+1 per level)', 50, 1)}
                     </div>
                 `;
             } else if (tab === 'political') {
@@ -3607,7 +3648,7 @@
             container.innerHTML = html;
         }
 
-        function renderResearchItem(tree, key, title, desc, max) {
+        function renderResearchItem(tree, key, title, desc, max, cost = 1) {
             const level = state.research.trees[tree.toLowerCase()][key];
             const isMax = level >= max;
             return `
@@ -3616,23 +3657,23 @@
                         <div class="font-bold text-white uppercase text-sm">${title} (LVL ${level}/${max})</div>
                         <div class="text-xs text-slate-500 mt-1">${desc}</div>
                     </div>
-                    <button onclick="upgradeResearch('${tree.toLowerCase()}', '${key}', ${max})" 
+                    <button onclick="upgradeResearch('${tree.toLowerCase()}', '${key}', ${max}, ${cost})" 
                             class="${isMax ? 'bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:scale-105'} px-6 py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all"
                             ${isMax ? 'disabled' : ''}>
-                        ${isMax ? 'MAXED' : 'UPGRADE (1T)'}
+                        ${isMax ? 'MAXED' : `UPGRADE (${cost}T)`}
                     </button>
                 </div>
             `;
         }
 
-        function upgradeResearch(tree, key, max) {
-            if (state.research.tokens <= 0) {
-                notify("Not enough Research Tokens!", "error");
+        function upgradeResearch(tree, key, max, cost = 1) {
+            if (state.research.tokens < cost) {
+                notify(`Not enough Research Tokens! Need ${cost}T.`, "error");
                 return;
             }
             if (state.research.trees[tree][key] >= max) return;
             
-            state.research.tokens--;
+            state.research.tokens -= cost;
             state.research.trees[tree][key]++;
             updateResearchUI();
             renderResearchContent(tree);
