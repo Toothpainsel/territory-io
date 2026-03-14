@@ -3879,38 +3879,48 @@
             const e = state.entities[entityIdx];
             if (!e || e.ownedCount === 0) return 0;
 
-            // 1. Territory Factor (0-4 points)
-            const territoryScore = Math.min(4, e.ownedCount / 5000); 
+            // 1. Territory Factor (0-3.5 points)
+            const territoryScore = Math.min(3.5, e.ownedCount / 5000); 
             
-            // 2. City & Development Factor (0-3 points)
-            const cityScore = Math.min(2, e.cityCount / 20);
-            const devScore = Math.min(1, e.ovcd / 8);
+            // 2. City & Development Factor (0-2 points)
+            const cityScore = Math.min(1.5, e.cityCount / 20);
+            const devScore = Math.min(0.5, e.ovcd / 8);
             
-            // 3. Wealth Factor (0-1.5 points)
+            // 3. Wealth Factor (0-1 point)
             let wealthScore = 0;
             if (e.balance === Infinity) {
-                wealthScore = 1.5;
+                wealthScore = 1.0;
             } else {
-                wealthScore = Math.min(1.5, Math.log10(Math.max(1, e.balance)) / 10);
+                wealthScore = Math.min(1.0, Math.log10(Math.max(1, e.balance)) / 10);
             }
             
-            // 4. Military Factor (0-1.5 points)
-            const warScore = Math.min(1.5, e.warsWon * 0.15);
+            // 4. Military Factor (0-1 point)
+            const warScore = Math.min(1.0, e.warsWon * 0.15);
             
-            // 5. Research Factor (only for player, 0-1 point)
+            // 5. Infrastructure (Dams) Factor (0-1 point)
+            const damScore = Math.min(1.0, (e.damCount || 0) / 20);
+
+            // 6. Diplomacy (Allies) Factor (0-1 point)
+            let allianceCount = 0;
+            state.alliances.forEach(pair => {
+                const parts = pair.split('-');
+                if (parts.includes(entityIdx.toString())) allianceCount++;
+            });
+            const allianceScore = Math.min(1.0, allianceCount * 0.25);
+
+            // 7. Research Factor (only for player, 0-0.5 point)
             let researchScore = 0;
             if (entityIdx === 1) {
                 const totalLevels = Object.values(state.research.trees).reduce((sum, tree) => {
                     return sum + Object.values(tree).reduce((s, val) => s + val, 0);
                 }, 0);
-                researchScore = Math.min(1, totalLevels / 100);
+                researchScore = Math.min(0.5, totalLevels / 200);
             } else {
-                // Bots get a small bonus based on difficulty
-                const diffBonus = { 'ez': 0.1, 'strategic': 0.3, 'hard': 0.5, 'insane': 0.8 };
-                researchScore = diffBonus[e.difficulty] || 0.1;
+                const diffBonus = { 'ez': 0.05, 'strategic': 0.15, 'hard': 0.3, 'insane': 0.5 };
+                researchScore = diffBonus[e.difficulty] || 0.05;
             }
 
-            const total = territoryScore + cityScore + devScore + wealthScore + warScore + researchScore;
+            const total = territoryScore + cityScore + devScore + wealthScore + warScore + damScore + allianceScore + researchScore;
             // Normalize to 1-digit 4-decimal (e.g. 0.0000 to 9.9999)
             return Math.min(9.9999, total);
         }
