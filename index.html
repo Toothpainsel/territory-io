@@ -1640,7 +1640,7 @@
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
             
             const entity = state.entities[ownerIdx];
-            const isWater = state.tileTypes[idx] === 0;
+            const isWater = state.tileTypes[idx] === 0 || state.tileTypes[idx] === 3 || state.tileTypes[idx] === 4;
             let currentCost = isWater ? (entity.tileCost * CONFIG.BRIDGE_MULTIPLIER) : entity.tileCost;
             
             // Apply war multiplier if not free
@@ -1811,8 +1811,13 @@
                     clustersFound++;
                     state.tileFlags[cluster[0]] |= 32;
                     cluster.forEach(i => {
+                        const oldOwner = state.tileOwners[i];
+                        if (oldOwner !== ownerIdx) {
+                            if (oldOwner > 0) state.entities[oldOwner].ownedCount--;
+                            state.entities[ownerIdx].ownedCount++;
+                            state.tileOwners[i] = ownerIdx;
+                        }
                         newDams.add(i);
-                        state.tileOwners[i] = ownerIdx;
                     });
                 }
             }
@@ -1820,6 +1825,8 @@
             // Sync types and redraw only changed tiles
             state.damIndices.forEach(idx => {
                 if (!newDams.has(idx)) {
+                    const currentOwner = state.tileOwners[idx];
+                    if (currentOwner > 0) state.entities[currentOwner].ownedCount--;
                     state.tileTypes[idx] = 0;
                     state.tileOwners[idx] = 0; // Revert to unowned water
                     drawTile(idx % CONFIG.COLS, Math.floor(idx / CONFIG.COLS));
@@ -1835,6 +1842,9 @@
                 }
             });
             state.damIndices = newDams;
+            
+            // Sync player's global ownedCount
+            state.ownedCount = state.entities[1].ownedCount;
             
             // Update Dam Counts for all entities
             state.entities.forEach(e => e.damCount = 0);
@@ -2014,23 +2024,52 @@
 
                 if (state.mode === 'paint') {
                     let tilesClaimed = 0;
+                    let queue = [];
+                    let visited = new Set();
+
+                    // Find all initial valid starting points within radius
                     for (let dy = -radius; dy <= radius; dy++) {
                         for (let dx = -radius; dx <= radius; dx++) {
-                            if (tilesClaimed >= maxTiles) break;
                             const tx = x + dx, ty = y + dy;
                             if (tx < 0 || tx >= CONFIG.COLS || ty < 0 || ty >= CONFIG.ROWS) continue;
                             const tIdx = ty * CONFIG.COLS + tx;
                             if (state.tileOwners[tIdx] === 0) {
-                                const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
-                                const tHasOwnedNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
+                                const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, idx+CONFIG.COLS]; // Use original idx context for safety
+                                // Actually, neighbors of tIdx
+                                const nbs = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
+                                const tHasOwnedNeighbor = nbs.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                                 if (tHasOwnedNeighbor) {
-                                    claim(tx, ty, false, 1, true);
-                                    tilesClaimed++;
+                                    queue.push({tx, ty, idx: tIdx});
+                                    visited.add(tIdx);
                                 }
                             }
                         }
-                        if (tilesClaimed >= maxTiles) break;
                     }
+
+                    // BFS Expansion within radius
+                    let head = 0;
+                    while (head < queue.length && tilesClaimed < maxTiles) {
+                        const curr = queue[head++];
+                        claim(curr.tx, curr.ty, false, 1, true);
+                        tilesClaimed++;
+
+                        const nbs = [
+                            {tx: curr.tx-1, ty: curr.ty}, {tx: curr.tx+1, ty: curr.ty},
+                            {tx: curr.tx, ty: curr.ty-1}, {tx: curr.tx, ty: curr.ty+1}
+                        ];
+                        for (let n of nbs) {
+                            if (n.tx < 0 || n.tx >= CONFIG.COLS || n.ty < 0 || n.ty >= CONFIG.ROWS) continue;
+                            const nIdx = n.ty * CONFIG.COLS + n.tx;
+                            if (state.tileOwners[nIdx] === 0 && !visited.has(nIdx)) {
+                                // Must be within original radius
+                                if (Math.abs(n.tx - x) <= radius && Math.abs(n.ty - y) <= radius) {
+                                    visited.add(nIdx);
+                                    queue.push({tx: n.tx, ty: n.ty, idx: nIdx});
+                                }
+                            }
+                        }
+                    }
+
                     if (tilesClaimed > 0) {
                         drawRegion(x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
                     }
@@ -2052,26 +2091,51 @@
                         }
                         if (allyIdx > 0) {
                             let tilesClaimed = 0;
+                            let queue = [];
+                            let visited = new Set();
+
+                            // Initial valid starting points for ally paint
                             for (let dy = -radius; dy <= radius; dy++) {
                                 for (let dx = -radius; dx <= radius; dx++) {
-                                    if (tilesClaimed >= maxTiles) break;
                                     const tx = x + dx, ty = y + dy;
                                     if (tx < 0 || tx >= CONFIG.COLS || ty < 0 || ty >= CONFIG.ROWS) continue;
                                     const tIdx = ty * CONFIG.COLS + tx;
                                     if (state.tileOwners[tIdx] === 0) {
-                                        const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
-                                        const tHasAllyNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === allyIdx);
-                                        const tHasPlayerNeighbor = tNeighbors.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
-                                        
+                                        const nbs = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
+                                        const tHasAllyNeighbor = nbs.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === allyIdx);
+                                        const tHasPlayerNeighbor = nbs.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                                         if (tHasAllyNeighbor || tHasPlayerNeighbor) {
-                                            claim(tx, ty, false, allyIdx, true);
-                                            state.sharedOwnership[tIdx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
-                                            tilesClaimed++;
+                                            queue.push({tx, ty, idx: tIdx});
+                                            visited.add(tIdx);
                                         }
                                     }
                                 }
-                                if (tilesClaimed >= maxTiles) break;
                             }
+
+                            // BFS Expansion for ally paint
+                            let head = 0;
+                            while (head < queue.length && tilesClaimed < maxTiles) {
+                                const curr = queue[head++];
+                                claim(curr.tx, curr.ty, false, allyIdx, true);
+                                state.sharedOwnership[curr.idx] = { originalOwner: allyIdx, sharedWith: 1, type: state.mode === 'ally-paint' ? 'ally' : 'teammate' };
+                                tilesClaimed++;
+
+                                const nbs = [
+                                    {tx: curr.tx-1, ty: curr.ty}, {tx: curr.tx+1, ty: curr.ty},
+                                    {tx: curr.tx, ty: curr.ty-1}, {tx: curr.tx, ty: curr.ty+1}
+                                ];
+                                for (let n of nbs) {
+                                    if (n.tx < 0 || n.tx >= CONFIG.COLS || n.ty < 0 || n.ty >= CONFIG.ROWS) continue;
+                                    const nIdx = n.ty * CONFIG.COLS + n.tx;
+                                    if (state.tileOwners[nIdx] === 0 && !visited.has(nIdx)) {
+                                        if (Math.abs(n.tx - x) <= radius && Math.abs(n.ty - y) <= radius) {
+                                            visited.add(nIdx);
+                                            queue.push({tx: n.tx, ty: n.ty, idx: nIdx});
+                                        }
+                                    }
+                                }
+                            }
+
                             if (tilesClaimed > 0) {
                                 drawRegion(x - radius - 1, y - radius - 1, x + radius + 1, y + radius + 1);
                             }
