@@ -3527,71 +3527,11 @@
                      }
                 });
 
-                // Max Balance Calculation: Base (Tiles) + 5% Multiplier per City
-                const baseMax = state.ownedCount * CONFIG.VAL_PER_TILE;
-                const cityMultiplier = 1 + (state.cityCount * CONFIG.CITY_MAX_BONUS);
-                
-                // Add city development bonuses (Exponential growth)
-                let devMaxMultiplier = 0;
-                let devBonus = 0;
-                let totalCityLevels = 0;
-                
-                for (const idx of state.cityIndices) {
-                    const level = state.cityLevels[idx] || 0;
-                    totalCityLevels += level;
-                    
-                    if (level > 0) {
-                        // Individual City Multipliers (1.4 growth factor)
-                        const multiplier = (Math.pow(1.4, level) - 1) / (Math.pow(1.4, 8) - 1);
-                        devMaxMultiplier += 0.20 * multiplier;
-                        devBonus += (state.ownedCount * 0.30) * multiplier;
-                    }
-                }
-                
-                const avgLevel = state.cityCount > 0 ? totalCityLevels / state.cityCount : 0;
-                let globalDevBonus = 0;
-                if (avgLevel > 0) {
-                    // Global Average Bonus (1.5 growth factor, up to 50% extra base income)
-                    const globalMultiplier = (Math.pow(1.5, avgLevel) - 1) / (Math.pow(1.5, 8) - 1);
-                    globalDevBonus = (state.ownedCount * 0.50) * globalMultiplier;
-                }
-                
-                const resMaxBalanceBonus = getResearchBonus('economic', 'maxBalance', 100, 0.5, 100);
-                const maxBalance = baseMax * (cityMultiplier + devMaxMultiplier) * (1 + resMaxBalanceBonus);
-                
-                const rate = Math.max(0.01, 0.07 - (0.06/0.69)*((state.balance/maxBalance)-0.01));
-                const baseIncome = state.ownedCount + (state.balance * rate) + (state.cityCount * CONFIG.CITY_BONUS) + (state.hasCapital ? CONFIG.CAPITAL_BONUS : 0) + (state.damCount * CONFIG.DAM_BONUS);
-                
-                // Investment Bonuses
-                const investmentMultiplier = state.investments.reduce((sum, inv) => sum + inv.bonus, 0);
-                const investmentIncome = (baseIncome + devBonus + globalDevBonus) * investmentMultiplier;
-                
-                const totalIncome = baseIncome + devBonus + globalDevBonus + investmentIncome;
-                
-                // Overpopulation Penalty (-10% balance per tick per overpopulated city)
-                let overpopPenalty = 0;
-                for (const idx of state.cityIndices) {
-                    if (state.tileOwners[idx] === 1) {
-                        const level = state.cityLevels[idx];
-                        const maxPop = 5000 * (level + 1);
-                        if (state.cityPopulations[idx] >= maxPop && level < getMaxCityLevel()) {
-                            overpopPenalty += state.balance * 0.10;
-                        }
-                    }
-                }
-
-                // War Penalty (-0.5% balance per tick, reduced by research)
-                let warPenalty = 0;
-                const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
-                if (playerActiveWar) {
-                    const basePenaltyRate = 0.005; // 0.5%
-                    const resPenaltyDiscount = getResearchBonus('economic', 'warPenalty', 30, 0.01, 0.98); // 1% to 98% reduction
-                    const finalPenaltyRate = basePenaltyRate * (1 - resPenaltyDiscount);
-                    warPenalty = state.balance * finalPenaltyRate;
-                }
+                updateFinances();
+                const p = state.entities[1];
 
                 if (state.balance !== Infinity) {
-                    state.balance = Math.min(maxBalance, state.balance + totalIncome - warPenalty - overpopPenalty);
+                    state.balance = Math.min(p.maxBalance, state.balance + p.totalIncome - p.totalExpense);
                     if (state.balance < 0) state.balance = 0;
                 }
                 state.entities[1].balance = state.balance; // Keep in sync
@@ -3623,9 +3563,9 @@
                 }
 
                 if (state.cycleTimer >= CONFIG.CYCLE) {
-                    const bonus = totalIncome + (state.ownedCount * 2);
+                    const bonus = p.totalIncome + (state.ownedCount * 2);
                     if (state.balance !== Infinity) {
-                        state.balance = Math.min(maxBalance, state.balance + bonus);
+                        state.balance = Math.min(p.maxBalance, state.balance + bonus);
                     }
                     state.entities[1].balance = state.balance; // Keep in sync
                     state.cycleTimer = 0;
@@ -3656,11 +3596,7 @@
                     if (bot.paralyzedCycles > 0) continue; // Paralyzed bots skip everything
 
                     // Bot Income
-                    const botBaseMax = bot.ownedCount * CONFIG.VAL_PER_TILE;
-                    const botMaxBalance = botBaseMax * (1 + (bot.cityCount * CONFIG.CITY_MAX_BONUS));
-                    const botRate = Math.max(0.01, 0.07 - (0.06/0.69)*((bot.balance/botMaxBalance)-0.01));
-                    const botIncome = bot.ownedCount + (bot.balance * botRate) + (bot.cityCount * CONFIG.CITY_BONUS) + CONFIG.CAPITAL_BONUS + (bot.damCount * CONFIG.DAM_BONUS);
-                    bot.balance = Math.min(botMaxBalance, bot.balance + botIncome);
+                    bot.balance = Math.min(bot.maxBalance, bot.balance + bot.totalIncome);
 
                     // Bots expand on cycle 0 (or every tick for Insane)
                     const isInsane = bot.difficulty === 'insane';
@@ -4140,6 +4076,118 @@
             closeFactionModal();
         }
 
+        function updateFinances() {
+            // 1. Sync player stats to state.entities[1]
+            const p = state.entities[1];
+            p.balance = state.balance;
+            p.ownedCount = state.ownedCount;
+            p.cityCount = state.cityCount;
+            p.damCount = state.damCount;
+            p.hasCapital = state.hasCapital;
+
+            // 2. Reset temp stats
+            state.entities.forEach(e => {
+                e.tempTotalLevel = 0;
+                e.totalPopulation = 0;
+                e.overpopPenaltyRate = 0;
+            });
+
+            // 3. Calculate city-based stats for everyone
+            state.cityIndices.forEach(idx => {
+                const owner = state.tileOwners[idx];
+                if (owner > 0) {
+                    const e = state.entities[owner];
+                    const level = state.cityLevels[idx] || 0;
+                    e.tempTotalLevel += level;
+                    e.totalPopulation += state.cityPopulations[idx] || 0;
+                    
+                    // Overpopulation check (1% penalty per overpopulated city)
+                    const maxPop = 5000 * (level + 1);
+                    if (state.cityPopulations[idx] >= maxPop && level < getMaxCityLevel()) {
+                        e.overpopPenaltyRate += 0.01; 
+                    }
+                }
+            });
+
+            // 4. Final Finance Calculation for each entity
+            state.entities.forEach((e, eIdx) => {
+                if (eIdx === 0 || e.ownedCount === 0) {
+                    e.totalIncome = 0; e.totalExpense = 0; e.maxBalance = 0; e.powerIndex = 0;
+                    return;
+                }
+
+                // --- Max Balance ---
+                const baseMax = e.ownedCount * CONFIG.VAL_PER_TILE;
+                const cityMultiplier = 1 + (e.cityCount * CONFIG.CITY_MAX_BONUS);
+                
+                let devMaxMultiplier = 0;
+                let devBonusFlat = 0;
+                if (e.cityCount > 0) {
+                    const avgLevel = e.tempTotalLevel / e.cityCount;
+                    const multiplier = (Math.pow(1.4, avgLevel) - 1) / (Math.pow(1.4, 8) - 1);
+                    devMaxMultiplier = 0.20 * multiplier;
+                    devBonusFlat = (e.ownedCount * 0.30) * multiplier;
+                }
+                
+                let resMaxBalanceBonus = 0;
+                if (eIdx === 1) {
+                    resMaxBalanceBonus = getResearchBonus('economic', 'maxBalance', 100, 0.5, 100);
+                }
+                
+                e.maxBalance = baseMax * (cityMultiplier + devMaxMultiplier) * (1 + resMaxBalanceBonus);
+                if (e.balance === Infinity) e.maxBalance = Infinity;
+
+                // --- Income Rate ---
+                let rate = 0.01;
+                if (e.maxBalance > 0 && e.balance !== Infinity) {
+                    rate = Math.max(0.01, 0.07 - (0.06/0.69)*((e.balance/e.maxBalance)-0.01));
+                }
+
+                // --- Base Income ---
+                const baseIncome = e.ownedCount + (e.balance === Infinity ? 0 : e.balance * rate) + 
+                                   (e.cityCount * CONFIG.CITY_BONUS) + 
+                                   (e.hasCapital ? CONFIG.CAPITAL_BONUS : 0) + 
+                                   (e.damCount * CONFIG.DAM_BONUS);
+                
+                // --- Multipliers ---
+                let investmentMultiplier = 0;
+                if (eIdx === 1) {
+                    investmentMultiplier = state.investments.reduce((sum, inv) => sum + inv.bonus, 0);
+                }
+                
+                let globalDevBonus = 0;
+                if (e.cityCount > 0) {
+                    const avgLevel = e.tempTotalLevel / e.cityCount;
+                    const globalMultiplier = (Math.pow(1.5, avgLevel) - 1) / (Math.pow(1.5, 8) - 1);
+                    globalDevBonus = (e.ownedCount * 0.50) * globalMultiplier;
+                }
+
+                e.totalIncome = (baseIncome + devBonusFlat + globalDevBonus) * (1 + investmentMultiplier);
+                if (e.balance === Infinity) e.totalIncome = Infinity;
+
+                // --- Expenses ---
+                let warPenaltyRate = 0;
+                const activeWar = state.wars.find(w => w.active && (w.host === eIdx || w.target === eIdx || w.allies.includes(eIdx) || w.targetAllies.includes(eIdx)));
+                if (activeWar) {
+                    const basePenaltyRate = 0.005; // 0.5%
+                    let resPenaltyDiscount = 0;
+                    if (eIdx === 1) {
+                        resPenaltyDiscount = getResearchBonus('economic', 'warPenalty', 30, 0.01, 0.98);
+                    } else {
+                        const diffBonus = { 'ez': 0.1, 'strategic': 0.3, 'hard': 0.5, 'insane': 0.7 };
+                        resPenaltyDiscount = diffBonus[e.difficulty] || 0.1;
+                    }
+                    warPenaltyRate = basePenaltyRate * (1 - resPenaltyDiscount);
+                }
+
+                e.totalExpense = (e.balance === Infinity ? 0 : e.balance * (warPenaltyRate + e.overpopPenaltyRate));
+                
+                // --- Stats Sync ---
+                e.ovcd = e.cityCount > 0 ? parseFloat((e.tempTotalLevel / e.cityCount).toFixed(1)) : 0;
+                e.powerIndex = calculatePowerIndex(eIdx);
+            });
+        }
+
         function updateUI(maxVal) {
             state.lastMaxBalance = maxVal; // Store for other functions
             document.getElementById('stat-balance').innerText = state.balance === Infinity ? '$inf' : `$${Math.floor(state.balance).toLocaleString()}`;
@@ -4350,39 +4398,19 @@
             if (document.getElementById('management-modal').classList.contains('hidden')) return;
 
             // 1. Financial Overview
-            const playerEntity = state.entities[1];
+            const p = state.entities[1];
             const playerActiveWar = state.wars.find(w => w.active && (w.host === 1 || w.target === 1 || w.allies.includes(1) || w.targetAllies.includes(1)));
             
-            // Income calculation
-            const baseIncome = state.ownedCount * (CONFIG.VAL_PER_TILE / 10);
-            const cityBonus = (state.cityCount * CONFIG.CITY_BONUS);
-            const totalCityLevels = Array.from(state.cityIndices).reduce((sum, idx) => {
-                return state.tileOwners[idx] === 1 ? sum + state.cityLevels[idx] : sum;
-            }, 0);
-            const devBonus = baseIncome * (totalCityLevels * 0.05);
-            
-            // Investment Bonuses
-            const investmentMultiplier = state.investments.reduce((sum, inv) => sum + inv.bonus, 0);
-            const investmentIncome = (baseIncome + cityBonus + devBonus) * investmentMultiplier;
-            
-            const totalIncome = baseIncome + cityBonus + devBonus + investmentIncome;
-            
-            // Expense calculation
-            let totalExpense = 0;
             let expenseReason = "No active expenses";
-            if (playerActiveWar) {
-                const warPenaltyBase = 0.005; // 0.5%
-                const resDiscount = getResearchBonus('economic', 'warPenalty', 30, 0.01, 0.98); // scales from 0% to ~98% reduction
-                const penaltyRate = warPenaltyBase * (1 - resDiscount);
-                totalExpense = state.balance * penaltyRate;
-                expenseReason = `War penalty (${(penaltyRate * 100).toFixed(3)}% / tick)`;
+            if (p.totalExpense > 0) {
+                expenseReason = playerActiveWar ? "War & Overpopulation" : "Overpopulation Penalty";
             }
 
-            const netIncome = totalIncome - totalExpense;
-
-            document.getElementById('mgt-total-income').innerText = `+$${Math.floor(totalIncome).toLocaleString()}`;
-            document.getElementById('mgt-total-expense').innerText = `-$${Math.floor(totalExpense).toLocaleString()}`;
+            document.getElementById('mgt-total-income').innerText = p.totalIncome === Infinity ? '+$inf' : `+$${Math.floor(p.totalIncome).toLocaleString()}`;
+            document.getElementById('mgt-total-expense').innerText = `-$${Math.floor(p.totalExpense).toLocaleString()}`;
             document.getElementById('mgt-expense-reason').innerText = expenseReason;
+            
+            const netIncome = p.totalIncome - p.totalExpense;
             document.getElementById('mgt-overall-income').innerText = (netIncome >= 0 ? '+' : '-') + `$${Math.floor(Math.abs(netIncome)).toLocaleString()}`;
             document.getElementById('mgt-overall-income').className = netIncome >= 0 ? 'text-2xl font-black text-emerald-400' : 'text-2xl font-black text-red-400';
 
@@ -4715,74 +4743,6 @@
         function updateLeaderboard() {
             const listEl = document.getElementById('leaderboard-list');
             if (!listEl) return;
-
-            // Sync player entity with global state for leaderboard accuracy
-            state.entities[1].balance = state.balance;
-            state.entities[1].ownedCount = state.ownedCount;
-            state.entities[1].cityCount = state.cityCount;
-            state.entities[1].damCount = state.damCount;
-
-            // Reset OVCD and Population for a fresh calculation pass
-            state.entities.forEach(e => {
-                e.tempTotalLevel = 0;
-                e.totalPopulation = 0;
-                e.totalIncome = 0;
-                e.totalExpense = 0;
-            });
-            const cityCounts = new Uint8Array(state.entities.length);
-
-            // One-pass calculation for all city-related stats
-            state.cityIndices.forEach(idx => {
-                const owner = state.tileOwners[idx];
-                if (owner > 0) {
-                    state.entities[owner].tempTotalLevel += state.cityLevels[idx] || 0;
-                    state.entities[owner].totalPopulation += state.cityPopulations[idx] || 0;
-                    cityCounts[owner]++;
-                }
-            });
-
-            // Update final values and calculate financial metrics
-            state.entities.forEach((entity, eIdx) => {
-                if (eIdx === 0) return;
-                
-                // 1. Development (OVCD)
-                entity.ovcd = cityCounts[eIdx] > 0 ? parseFloat((entity.tempTotalLevel / cityCounts[eIdx]).toFixed(1)) : 0;
-                
-                // 2. Financial Metrics (Income/Expense)
-                const isPlayer = eIdx === 1;
-                const activeWar = state.wars.find(w => w.active && (w.host === eIdx || w.target === eIdx || w.allies.includes(eIdx) || w.targetAllies.includes(eIdx)));
-                
-                // Income
-                const baseIncome = entity.ownedCount * (CONFIG.VAL_PER_TILE / 10);
-                const cityBonus = (entity.cityCount * CONFIG.CITY_BONUS);
-                const devIncomeBonus = baseIncome * (entity.tempTotalLevel * 0.05);
-                
-                let investmentBonus = 0;
-                if (isPlayer) {
-                    const investmentMultiplier = state.investments.reduce((sum, inv) => sum + inv.bonus, 0);
-                    investmentBonus = (baseIncome + cityBonus + devIncomeBonus) * investmentMultiplier;
-                }
-                
-                entity.totalIncome = baseIncome + cityBonus + devIncomeBonus + investmentBonus;
-                
-                // Expense (War Penalty)
-                if (activeWar) {
-                    const basePenaltyRate = 0.005; // 0.5%
-                    let resPenaltyDiscount = 0;
-                    if (isPlayer) {
-                        resPenaltyDiscount = getResearchBonus('economic', 'warPenalty', 30, 0.01, 0.98);
-                    } else {
-                        // Bots get some scaling reduction based on difficulty
-                        const diffBonus = { 'ez': 0.1, 'strategic': 0.3, 'hard': 0.5, 'insane': 0.7 };
-                        resPenaltyDiscount = diffBonus[entity.difficulty] || 0.1;
-                    }
-                    const finalPenaltyRate = basePenaltyRate * (1 - resPenaltyDiscount);
-                    entity.totalExpense = entity.balance * finalPenaltyRate;
-                }
-
-                // 3. Calculate Power Index
-                entity.powerIndex = calculatePowerIndex(eIdx);
-            });
 
             // Prepare list of entities (excluding WILD)
             const leaderboardData = state.entities.slice(1).map((e, idx) => {
