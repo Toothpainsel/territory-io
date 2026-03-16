@@ -1082,7 +1082,8 @@
             activeDonutIdx: null,
             launchedMissiles: new Set(), // Track indices being targetted to avoid duplicates
             activeExplosions: new Set(), // Prevent multiple explosions on same tile
-            capitalPos: {x: 0, y: 0},
+            needsLabelUpdate: false,
+            needsDamCheck: false,
             bounds: { minX: 384, maxX: 0, minY: 216, maxY: 0 }, // Incremental bounding box
             isPC: !('ontouchstart' in window),
             lastFrameTime: performance.now(),
@@ -1566,8 +1567,9 @@
                 
                 if (validSpots.length === 0) return;
                 const spawnIdx = validSpots[Math.floor(Math.random() * validSpots.length)];
-                sx = spawnIdx % CONFIG.COLS;
-                sy = Math.floor(spawnIdx / CONFIG.COLS);
+                // Clamp sx, sy to ensure 6x6 area fits on map
+                sx = Math.min(CONFIG.COLS - 6, spawnIdx % CONFIG.COLS);
+                sy = Math.min(CONFIG.ROWS - 6, Math.floor(spawnIdx / CONFIG.COLS));
             }
             
             for (let y = 0; y < 6; y++) {
@@ -1636,6 +1638,7 @@
         }
 
         function claim(x, y, free = false, ownerIdx = 1, suppressDraw = false) {
+            if (x < 0 || x >= CONFIG.COLS || y < 0 || y >= CONFIG.ROWS) return;
             const idx = y * CONFIG.COLS + x;
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
             
@@ -1724,13 +1727,13 @@
                 state.balance -= currentCost; 
                 state.entities[1].balance = state.balance; // Keep in sync
                 entity.tileCost += 0.25; 
-                checkForDams(); 
+                state.needsDamCheck = true; 
             } else if (ownerIdx !== 1 && !free) {
                 // For bots, subtract from their balance and increment their tileCost
                 entity.balance -= currentCost;
                 entity.tileCost += 0.25;
             }
-            if (ownerIdx === 1) updateLabel();
+            if (ownerIdx === 1) state.needsLabelUpdate = true;
         }
 
         function updateTileBorder(x, y, suppressDraw = false) {
@@ -3497,6 +3500,16 @@
             state.lastFrameTime = timestamp;
             state.frameCount++;
 
+            // Throttled UI/State updates
+            if (state.needsLabelUpdate) {
+                updateLabel();
+                state.needsLabelUpdate = false;
+            }
+            if (state.needsDamCheck) {
+                checkForDams();
+                state.needsDamCheck = false;
+            }
+
             // Bot Betrayal Logic (Check every cycle)
             if (state.cycleTimer === 0 && state.lastTick !== timestamp) {
                 state.entities.forEach((bot, idx) => {
@@ -3751,6 +3764,17 @@
 
                 // --- Bot AI & Economy ---
                 let anyInsaneExpanded = false;
+                
+                // Optimization: Scan for all borders once per tick instead of per bot
+                const bordersByOwner = {};
+                for (let t = 0; t < state.tileOwners.length; t++) {
+                    const owner = state.tileOwners[t];
+                    if (owner > 1 && (state.tileFlags[t] & 16)) {
+                        if (!bordersByOwner[owner]) bordersByOwner[owner] = [];
+                        bordersByOwner[owner].push(t);
+                    }
+                }
+
                 for (let i = 2; i < state.entities.length; i++) {
                     const bot = state.entities[i];
                     if (bot.ownedCount === 0) continue;
@@ -3787,14 +3811,13 @@
                         else if (difficulty === 'hard') expandCount = 8;
                         else if (difficulty === 'insane') expandCount = 4; // Lower per-tick for performance, but higher overall
 
-                        const owned = [];
-                        for(let t=0; t<state.tileTypes.length; t++) if(state.tileOwners[t] === i && (state.tileFlags[t] & 16)) owned.push(t);
+                        const ownedBorders = bordersByOwner[i] || [];
                         
-                        if (owned.length > 0) {
+                        if (ownedBorders.length > 0) {
                             // Insane Bot Dam Logic: Proactively try to enclose water
                             if (isInsane && Math.random() < 0.1) {
                                 // Find a water tile adjacent to territory
-                                for (const startIdx of owned) {
+                                for (const startIdx of ownedBorders) {
                                     const sx = startIdx % CONFIG.COLS, sy = Math.floor(startIdx / CONFIG.COLS);
                                     const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
                                     for (const dir of dirs) {
@@ -3822,7 +3845,7 @@
                             }
 
                             for(let e=0; e<expandCount; e++) {
-                                const startIdx = owned[Math.floor(Math.random() * owned.length)];
+                                const startIdx = ownedBorders[Math.floor(Math.random() * ownedBorders.length)];
                                 const sx = startIdx % CONFIG.COLS, sy = Math.floor(startIdx / CONFIG.COLS);
                                 const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
                                 const dir = dirs[Math.floor(Math.random() * 4)];
@@ -3848,7 +3871,7 @@
                         if (state.cycleTimer === 0 && !currentWar) {
                             // Find potential targets (bordering entities)
                             const potentialTargets = new Set();
-                            for (const tIdx of owned) {
+                            for (const tIdx of ownedBorders) {
                                 const x = tIdx % CONFIG.COLS, y = Math.floor(tIdx / CONFIG.COLS);
                                 const neighbors = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
                                 for (const n of neighbors) {
@@ -3859,7 +3882,6 @@
                                             potentialTargets.add(owner);
                                         }
                                     }
-                                }
                             }
 
                             if (potentialTargets.size > 0) {
@@ -3923,7 +3945,7 @@
                         }
                     }
                 }
-                if (anyInsaneExpanded || state.cycleTimer === 0) checkForDams();
+                if (anyInsaneExpanded || state.cycleTimer === 0) state.needsDamCheck = true;
             }
         }
         requestAnimationFrame(gameLoop);
