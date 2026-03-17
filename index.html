@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToyEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.6.0</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.7.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -876,13 +876,22 @@
                         <!-- Function Documentation -->
                         <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                             <code class="text-blue-400 font-bold text-sm">paint(x, y, width, height, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Fills a rectangular area with a specific tile type.</p>
-                            <div class="mt-3 space-y-1">
-                                <p class="text-[10px] text-slate-500 uppercase font-bold">Parameters:</p>
-                                <ul class="text-[10px] text-slate-400 list-disc list-inside">
-                                    <li><code class="text-slate-300">type</code>: 'water' (0) or 'land' (1)</li>
-                                </ul>
-                            </div>
+                            <p class="text-slate-400 text-xs mt-2">Fills a rectangular area with a specific tile type (Alias: rect).</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">line(x1, y1, x2, y2, type)</code>
+                            <p class="text-slate-400 text-xs mt-2">Draws a line between two points.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">get(x, y)</code>
+                            <p class="text-slate-400 text-xs mt-2">Returns tile type at coordinates ('water', 'land', 'city', 'capital').</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">set(x, y, type)</code>
+                            <p class="text-slate-400 text-xs mt-2">Sets tile type at coordinates.</p>
                         </div>
 
                         <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
@@ -960,7 +969,7 @@ print("World Generated!");</pre>
     <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
             <div class="flex items-center justify-end mb-4">
-                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.6.0</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.7.0</span>
             </div>
             <h1 class="text-3xl font-black text-center text-blue-400 mb-6 italic tracking-tight">TERRITORY.IO</h1>
             
@@ -1240,7 +1249,7 @@ print("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.6.0', // Current version tag (Event Feed & Sync)
+            version: '2.7.0', // Current version tag (Improved ToryScript & Map Loader)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1827,12 +1836,16 @@ print("World Generated!");</pre>
             const mapping = [
                 { pattern: /\btory\b/g, replacement: 'function' },
                 { pattern: /\bpaint\s*\(/g, replacement: 'fill(' },
+                { pattern: /\brect\s*\(/g, replacement: 'fill(' },
                 { pattern: /\bisland\s*\(/g, replacement: 'circle(' },
                 { pattern: /\bseed\s*\(/g, replacement: 'noise(' },
                 { pattern: /\bhome\s*\(/g, replacement: 'spawnCapital(' },
                 { pattern: /\bcity\s*\(/g, replacement: 'spawnCity(' },
                 { pattern: /\breset\s*\(\)/g, replacement: 'clear()' },
-                { pattern: /\bprint\s*\(/g, replacement: 'log(' }
+                { pattern: /\bprint\s*\(/g, replacement: 'log(' },
+                { pattern: /\bline\s*\(/g, replacement: 'drawLine(' },
+                { pattern: /\bget\s*\(/g, replacement: 'getTile(' },
+                { pattern: /\bset\s*\(/g, replacement: 'setTile(' }
             ];
 
             mapping.forEach(m => {
@@ -1873,6 +1886,36 @@ print("World Generated!");</pre>
                             }
                         }
                     },
+                    drawLine: (x1, y1, x2, y2, type) => {
+                        const t = type === 'water' ? 0 : 1;
+                        const dx = Math.abs(x2 - x1);
+                        const dy = Math.abs(y2 - y1);
+                        const sx = (x1 < x2) ? 1 : -1;
+                        const sy = (y1 < y2) ? 1 : -1;
+                        let err = dx - dy;
+                        while (true) {
+                            if (x1 >= 0 && x1 < CONFIG.COLS && y1 >= 0 && y1 < CONFIG.ROWS) {
+                                state.engine.mapData.tileTypes[y1 * CONFIG.COLS + x1] = t;
+                            }
+                            if (x1 === x2 && y1 === y2) break;
+                            const e2 = 2 * err;
+                            if (e2 > -dy) { err -= dy; x1 += sx; }
+                            if (e2 < dx) { err += dx; y1 += sy; }
+                        }
+                    },
+                    getTile: (x, y) => {
+                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                            const t = state.engine.mapData.tileTypes[y * CONFIG.COLS + x];
+                            return t === 0 ? 'water' : (t === 5 ? 'city' : (t === 6 ? 'capital' : 'land'));
+                        }
+                        return null;
+                    },
+                    setTile: (x, y, type) => {
+                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                            const tMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6 };
+                            state.engine.mapData.tileTypes[y * CONFIG.COLS + x] = tMap[type] !== undefined ? tMap[type] : 1;
+                        }
+                    },
                     noise: (scale = 0.1, threshold = 0.45) => {
                         for (let i = 0; i < CONFIG.ROWS; i++) {
                             for (let j = 0; j < CONFIG.COLS; j++) {
@@ -1897,6 +1940,9 @@ print("World Generated!");</pre>
                         }
                     },
                     clear: () => state.engine.mapData.tileTypes.fill(1),
+                    
+                    // Helpers
+                    random: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
                     
                     // Game State / Entity API
                     getEntities: () => state.entities.map(e => ({ name: e.name, balance: e.balance, tiles: e.ownedCount })),
@@ -1928,7 +1974,12 @@ print("World Generated!");</pre>
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    applyMapDataToGame(data);
+                    // Support both raw map JSON and .torymap workspace format
+                    if (data.mapData && data.vfs) {
+                        applyMapDataToGame(data.mapData);
+                    } else {
+                        applyMapDataToGame(data);
+                    }
                 } catch (err) {
                     alert("Invalid map file!");
                 }
