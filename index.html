@@ -927,21 +927,25 @@ log("World Generated!");</pre>
         </div>
     </div>
 
-    <div id="login-screen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
-        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 w-full max-w-sm">
-            <h1 class="text-3xl font-bold text-center text-blue-500 mb-2 italic">TERRITORY.IO</h1>
-            <p class="text-[10px] text-center text-slate-500 mb-6 uppercase tracking-widest font-bold">Expanded World v2.3</p>
+    <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
+        <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
+            <div class="flex items-center justify-between mb-4">
+                <span class="px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-[9px] text-cyan-300 font-bold uppercase tracking-[0.2em]">Command Center</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.5.1</span>
+            </div>
+            <h1 class="text-3xl font-black text-center text-blue-400 mb-2 italic tracking-tight">TERRITORY.IO</h1>
+            <p class="text-[10px] text-center text-slate-500 mb-6 uppercase tracking-[0.25em] font-bold">Strategic Operations Console</p>
             
-            <div class="flex gap-2 mb-6">
-                <button id="tab-single" onclick="setLoginTab('single')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg">Single</button>
-                <button id="tab-multi" onclick="setLoginTab('multi')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Multi</button>
-                <button id="tab-custom" onclick="setLoginTab('custom')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Custom</button>
-                <button id="tab-sandbox" onclick="setLoginTab('sandbox')" class="flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400">Sandbox</button>
+            <div class="grid grid-cols-4 gap-2 mb-6 p-1 rounded-2xl border border-slate-800 bg-slate-950/70">
+                <button id="tab-single" onclick="setLoginTab('single')" class="py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-blue-500/40 bg-blue-600/90 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]">Single</button>
+                <button id="tab-multi" onclick="setLoginTab('multi')" class="py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-transparent bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/70">Multi</button>
+                <button id="tab-custom" onclick="setLoginTab('custom')" class="py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-transparent bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/70">Custom</button>
+                <button id="tab-sandbox" onclick="setLoginTab('sandbox')" class="py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-transparent bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/70">Sandbox</button>
             </div>
 
-            <div id="single-panel">
+            <div id="single-panel" class="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                 <input type="text" id="username-input" maxlength="12" placeholder="Commander Name" title="Commander Name" aria-label="Enter your commander name"
-                       class="w-full bg-slate-800 border border-slate-800 p-4 rounded-xl mb-4 text-white text-center font-bold outline-none focus:border-blue-500 transition-colors">
+                       class="w-full bg-slate-900 border border-slate-700 p-4 rounded-xl mb-4 text-white text-center font-bold outline-none focus:border-blue-500 transition-colors">
                 
                 <div class="space-y-4 mb-6">
                     <div class="grid grid-cols-2 gap-3">
@@ -982,12 +986,12 @@ log("World Generated!");</pre>
                     </div>
                 </div>
 
-                <button onclick="startGame('single')" class="w-full bg-blue-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform">
+                <button onclick="startGame('single')" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] active:scale-95 transition-all">
                     SPAWN
                 </button>
             </div>
 
-            <div id="multi-panel" class="hidden">
+            <div id="multi-panel" class="hidden rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                 <form onsubmit="event.preventDefault(); startGame('multi')" class="space-y-3">
                     <label for="multi-username" class="sr-only">Multiplayer Username</label>
                     <input type="text" id="multi-username" placeholder="Username" title="Username" aria-label="Enter multiplayer username" autocomplete="username"
@@ -1002,7 +1006,7 @@ log("World Generated!");</pre>
                 </form>
             </div>
 
-            <div id="custom-panel" class="hidden">
+            <div id="custom-panel" class="hidden rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                 <div class="space-y-4">
                     <div class="flex flex-col items-center gap-3">
                         <div id="pattern-preview" class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden">
@@ -1016,18 +1020,18 @@ log("World Generated!");</pre>
                         </label>
                     </div>
                     <p class="text-[9px] text-center text-slate-500 uppercase font-bold">Upload an image to use as territory pattern</p>
-                    <button onclick="setLoginTab('single')" class="w-full bg-slate-700 py-3 rounded-xl font-bold text-white text-[10px] uppercase tracking-wider">Back to Start</button>
+                    <button onclick="setLoginTab('single')" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-xl font-bold text-white text-[10px] uppercase tracking-wider transition-colors">Back to Start</button>
                 </div>
             </div>
 
-            <div id="sandbox-panel" class="hidden">
+            <div id="sandbox-panel" class="hidden rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                 <div class="space-y-4">
-                    <button onclick="openSandboxEngine()" class="w-full bg-amber-600 py-4 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform uppercase text-xs">
+                    <button onclick="openSandboxEngine()" class="w-full bg-amber-600 hover:bg-amber-500 py-4 rounded-xl font-bold text-white shadow-[0_12px_30px_rgba(217,119,6,0.35)] active:scale-95 transition-all uppercase text-xs">
                         Open Map Engine
                     </button>
                     <div class="relative">
                         <input type="file" id="map-upload" accept=".json" aria-label="Upload map file" title="Upload map file" class="hidden" onchange="loadCustomMap(this)">
-                        <button onclick="document.getElementById('map-upload').click()" class="w-full bg-slate-800 border border-slate-700 py-4 rounded-xl font-bold text-slate-300 shadow-lg active:scale-95 transition-transform uppercase text-xs">
+                        <button onclick="document.getElementById('map-upload').click()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-4 rounded-xl font-bold text-slate-300 shadow-lg active:scale-95 transition-all uppercase text-xs">
                             Upload & Play Map
                         </button>
                     </div>
@@ -1897,23 +1901,23 @@ log("World Generated!");</pre>
             
             // Reset all tabs
             [singleTab, multiTab, customTab, sandboxTab].forEach(tab => {
-                if (tab) tab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400';
+                if (tab) tab.className = 'py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-transparent bg-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/70';
             });
             [singlePanel, multiPanel, customPanel, sandboxPanel].forEach(panel => {
                 if (panel) panel.classList.add('hidden');
             });
 
             if (mode === 'single') {
-                singleTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg';
+                singleTab.className = 'py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-blue-500/40 bg-blue-600/90 text-white shadow-[0_8px_20px_rgba(37,99,235,0.35)]';
                 singlePanel.classList.remove('hidden');
             } else if (mode === 'multi') {
-                multiTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-purple-600 text-white shadow-lg';
+                multiTab.className = 'py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-purple-500/40 bg-purple-600/90 text-white shadow-[0_8px_20px_rgba(147,51,234,0.35)]';
                 multiPanel.classList.remove('hidden');
             } else if (mode === 'custom') {
-                customTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
+                customTab.className = 'py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-amber-500/40 bg-amber-600/90 text-white shadow-[0_8px_20px_rgba(217,119,6,0.35)]';
                 customPanel.classList.remove('hidden');
             } else if (mode === 'sandbox') {
-                sandboxTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
+                sandboxTab.className = 'py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all border border-cyan-500/40 bg-cyan-600/90 text-white shadow-[0_8px_20px_rgba(8,145,178,0.35)]';
                 sandboxPanel.classList.remove('hidden');
             }
         }
