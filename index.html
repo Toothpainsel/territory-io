@@ -801,23 +801,28 @@
             <!-- ToryScript Tab -->
             <div id="engine-content-toryscript" class="hidden flex-1 flex bg-slate-950">
                 <div class="w-64 border-r border-slate-800 flex flex-col">
-                    <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase">Files</span>
-                        <button onclick="createNewToryFile()" class="text-blue-500 text-xs">+</button>
+                    <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Explorer</span>
+                        <div class="flex gap-2">
+                            <button onclick="vfsCreateFile()" class="text-blue-500 text-xs hover:text-blue-400 transition-colors" title="New File">📄</button>
+                            <button onclick="vfsCreateFolder()" class="text-amber-500 text-xs hover:text-amber-400 transition-colors" title="New Folder">📁</button>
+                        </div>
                     </div>
-                    <div id="tory-file-list" class="flex-1 overflow-y-auto p-2 space-y-1">
-                        <!-- List of .tory files -->
+                    <div id="vfs-tree" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                        <!-- Tree view injected here -->
                     </div>
                 </div>
                 <div class="flex-1 flex flex-col">
                     <div class="p-2 bg-slate-900 border-b border-slate-800 flex gap-2">
-                        <button onclick="runToryScript()" class="bg-blue-600 px-4 py-1 rounded text-[10px] font-bold text-white uppercase">Run Script</button>
-                        <button onclick="saveToryScript()" class="bg-slate-800 px-4 py-1 rounded text-[10px] font-bold text-slate-400 uppercase">Save</button>
-                        <span id="active-tory-filename" class="ml-auto text-[10px] text-slate-500 font-mono self-center">unsaved.tory</span>
+                        <button onclick="runToryScript()" class="bg-blue-600 px-4 py-1 rounded text-[10px] font-bold text-white uppercase hover:bg-blue-500 transition-all">Run Script</button>
+                        <button onclick="saveActiveFile()" class="bg-slate-800 px-4 py-1 rounded text-[10px] font-bold text-slate-400 uppercase hover:bg-slate-700 transition-all">Save</button>
+                        <div class="h-4 w-[1px] bg-slate-800 mx-2 self-center"></div>
+                        <span id="active-file-path" class="text-[10px] text-slate-500 font-mono self-center truncate max-w-xs">/root/scripts/main.tory</span>
+                        <span id="active-file-id" class="ml-auto text-[8px] text-slate-700 font-mono self-center uppercase">ID: s1</span>
                     </div>
                     <textarea id="tory-editor" spellcheck="false" class="flex-1 bg-slate-950 text-slate-300 font-mono text-sm p-6 outline-none resize-none whitespace-pre overflow-x-auto" placeholder="// ToryScript - Automate your map creation\n// Example: fill(0, 0, 10, 10, 'water')"></textarea>
                     <div id="tory-console" class="h-32 bg-black border-t border-slate-800 p-4 font-mono text-[10px] text-emerald-500 overflow-y-auto">
-                        > ToryScript Engine Ready.
+                        > ToryScript Engine v2.5.0 Initialized.
                     </div>
                 </div>
             </div>
@@ -1189,7 +1194,7 @@ log("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.4.4', // Current version tag (Script Viewer Fixes)
+            version: '2.5.0', // Current version tag (VFS & Enhanced ToryScript)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1278,10 +1283,23 @@ log("World Generated!");</pre>
                     cityIndices: [],
                     capitalIdx: null
                 },
-                files: [
-                    { name: 'example.tory', content: '// Example ToryScript\nfill(10, 10, 50, 50, "water");\nspawnCity(20, 20);\nspawnCapital(100, 100);', type: 'script' }
-                ],
-                activeFile: null
+                // --- New VFS Structure ---
+                vfs: {
+                    root: {
+                        id: 'root',
+                        name: 'root',
+                        type: 'folder',
+                        children: [
+                            { id: 'f1', name: 'scripts', type: 'folder', children: [
+                                { id: 's1', name: 'main.tory', type: 'script', content: '// ToryScript v2.5\nlog("Engine Booted...");\n\n// Run on every game tick\nfunction onTick() {\n    // Custom logic here\n}\n\n// Run on game start\nfunction onStart() {\n    noise(0.1, 0.45);\n    spawnCapital(192, 108);\n}' }
+                            ]},
+                            { id: 'f2', name: 'maps', type: 'folder', children: [] }
+                        ]
+                    },
+                    activeFileId: 's1',
+                    currentPath: '/root/scripts'
+                },
+                isInteracting: false
             }
         };
 
@@ -1419,31 +1437,270 @@ log("World Generated!");</pre>
             state.engine.activeTab = tab;
             ['editor', 'script', 'docs', 'explorer'].forEach(t => {
                 const btn = document.getElementById(`tab-engine-${t}`);
-                const panel = document.getElementById(`engine-content-${t === 'script' ? 'toryscript' : t}`);
+                const panel = document.getElementById(`engine-content-${t === 'script' ? 'toryscript' : (t === 'docs' ? 'docs' : t)}`);
                 if (btn) btn.className = t === tab ? 'px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] font-bold uppercase' : 'px-4 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-[10px] font-bold uppercase';
                 if (panel) panel.classList.toggle('hidden', t !== tab);
             });
             if (tab === 'explorer') updateEngineExplorer();
         }
 
-        // ToryScript Engine
-        function runToryScript() {
-            // Auto-save before running
-            if (state.engine.activeFile) {
-                const file = state.engine.files.find(f => f.name === state.engine.activeFile);
-                if (file) {
-                    file.content = document.getElementById('tory-editor').value;
-                    saveEngineFilesToStorage();
+        // --- New VFS Core Functions ---
+        function vfsGetNodeById(id, root = state.engine.vfs.root) {
+            if (root.id === id) return root;
+            if (root.children) {
+                for (let child of root.children) {
+                    const found = vfsGetNodeById(id, child);
+                    if (found) return found;
                 }
             }
+            return null;
+        }
 
+        function vfsGetParentNode(id, root = state.engine.vfs.root) {
+            if (root.children) {
+                if (root.children.some(c => c.id === id)) return root;
+                for (let child of root.children) {
+                    const parent = vfsGetParentNode(id, child);
+                    if (parent) return parent;
+                }
+            }
+            return null;
+        }
+
+        function vfsGetPath(id) {
+            const node = vfsGetNodeById(id);
+            if (!node) return '';
+            if (node.id === 'root') return '/root';
+            const parent = vfsGetParentNode(id);
+            if (!parent) return '/' + node.name;
+            return vfsGetPath(parent.id) + '/' + node.name;
+        }
+
+        function updateVFSTree() {
+            const treeEl = document.getElementById('vfs-tree');
+            if (!treeEl) return;
+            treeEl.innerHTML = '';
+            
+            const renderNode = (node, depth = 0) => {
+                const div = document.createElement('div');
+                div.className = `flex items-center gap-2 p-1 rounded hover:bg-slate-800 cursor-pointer group transition-colors`;
+                div.style.paddingLeft = `${depth * 12 + 4}px`;
+                
+                const isFolder = node.type === 'folder';
+                const icon = isFolder ? '📁' : (node.name.endsWith('.json') ? '🗺️' : '📜');
+                const isActive = state.engine.vfs.activeFileId === node.id;
+                
+                div.innerHTML = `
+                    <span class="text-xs">${icon}</span>
+                    <span class="text-[10px] font-mono ${isActive ? 'text-blue-400 font-bold' : 'text-slate-400'}">${node.name}</span>
+                    <div class="ml-auto flex gap-1 opacity-0 group-hover:opacity-100">
+                        <button onclick="event.stopPropagation(); vfsDeleteNode('${node.id}')" class="text-[8px] text-red-500 hover:text-red-400">×</button>
+                    </div>
+                `;
+                
+                div.onclick = () => {
+                    if (isFolder) {
+                        state.engine.vfs.currentPath = vfsGetPath(node.id);
+                    } else {
+                        vfsOpenFile(node.id);
+                    }
+                };
+                
+                treeEl.appendChild(div);
+                if (node.children) {
+                    node.children.sort((a, b) => (b.type === 'folder') - (a.type === 'folder') || a.name.localeCompare(b.name))
+                        .forEach(child => renderNode(child, depth + 1));
+                }
+            };
+            
+            renderNode(state.engine.vfs.root);
+            updateEngineExplorer(); // Keep global explorer in sync
+        }
+
+        function vfsOpenFile(id) {
+            const file = vfsGetNodeById(id);
+            if (!file || file.type === 'folder') return;
+            
+            // Sync current editor content back to file before switching
+            if (state.engine.vfs.activeFileId) {
+                const currentFile = vfsGetNodeById(state.engine.vfs.activeFileId);
+                if (currentFile) currentFile.content = document.getElementById('tory-editor').value;
+            }
+            
+            state.engine.vfs.activeFileId = id;
+            loadActiveFile();
+            updateVFSTree();
+        }
+
+        function loadActiveFile() {
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (!file) return;
+            
+            const editor = document.getElementById('tory-editor');
+            const pathEl = document.getElementById('active-file-path');
+            const idEl = document.getElementById('active-file-id');
+            
+            editor.value = file.content || '';
+            pathEl.innerText = vfsGetPath(file.id);
+            idEl.innerText = `ID: ${file.id}`;
+            
+            if (file.name.endsWith('.json')) {
+                setEngineTab('editor');
+            } else {
+                setEngineTab('script');
+            }
+        }
+
+        function saveActiveFile(showNotify = true) {
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (file) {
+                file.content = document.getElementById('tory-editor').value;
+                localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+                if (showNotify) notify(`Saved ${file.name}`, 'success');
+            }
+        }
+
+        function vfsCreateFile() {
+            const name = prompt("Enter filename (e.g. generator.tory):", "new_file.tory");
+            if (!name) return;
+            
+            const newNode = {
+                id: 'node_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                type: name.endsWith('.json') ? 'map' : 'script',
+                content: ''
+            };
+            
+            const currentDirNode = vfsGetNodeById(state.engine.vfs.currentPath.split('/').pop()) || state.engine.vfs.root;
+            const targetFolder = currentDirNode.type === 'folder' ? currentDirNode : state.engine.vfs.root;
+            
+            targetFolder.children.push(newNode);
+            vfsOpenFile(newNode.id);
+            localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+        }
+
+        function vfsCreateFolder() {
+            const name = prompt("Enter folder name:", "new_folder");
+            if (!name) return;
+            
+            const newNode = {
+                id: 'folder_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                type: 'folder',
+                children: []
+            };
+            
+            const currentDirNode = vfsGetNodeById(state.engine.vfs.currentPath.split('/').pop()) || state.engine.vfs.root;
+            const targetFolder = currentDirNode.type === 'folder' ? currentDirNode : state.engine.vfs.root;
+            
+            targetFolder.children.push(newNode);
+            updateVFSTree();
+            localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+        }
+
+        function vfsDeleteNode(id) {
+            if (id === 'root') return;
+            if (!confirm("Delete this item?")) return;
+            
+            const parent = vfsGetParentNode(id);
+            if (parent) {
+                parent.children = parent.children.filter(c => c.id !== id);
+                
+                if (state.engine.vfs.activeFileId === id) {
+                    state.engine.vfs.activeFileId = 's1'; // Fallback to main
+                    loadActiveFile();
+                }
+                
+                updateVFSTree();
+                localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+            }
+        }
+
+        function saveEngineMap() {
+            const name = prompt("Enter map name:", "custom_map");
+            if (!name) return;
+            
+            const cityIndices = [];
+            let capitalIdx = null;
+            state.engine.mapData.tileTypes.forEach((t, i) => {
+                if (t === 5) cityIndices.push(i);
+                if (t === 6) capitalIdx = i;
+            });
+
+            const mapData = {
+                name: name,
+                version: state.version,
+                tileTypes: Array.from(state.engine.mapData.tileTypes),
+                cityIndices: cityIndices,
+                capitalIdx: capitalIdx
+            };
+
+            const json = JSON.stringify(mapData);
+            const newNode = {
+                id: 'map_' + Math.random().toString(36).substr(2, 9),
+                name: name + '.json',
+                type: 'map',
+                content: json
+            };
+            
+            // Add to maps folder if it exists
+            const mapsFolder = vfsGetNodeById('f2') || state.engine.vfs.root;
+            mapsFolder.children.push(newNode);
+            
+            // Download also
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `${name}.json`; a.click();
+            
+            updateVFSTree();
+            notify("Map saved to VFS and downloaded!", "success");
+        }
+
+        function updateEngineExplorer() {
+            const grid = document.getElementById('explorer-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            const getAllFiles = (node, list = []) => {
+                if (node.type !== 'folder') list.push(node);
+                if (node.children) node.children.forEach(c => getAllFiles(c, list));
+                return list;
+            };
+            
+            const allFiles = getAllFiles(state.engine.vfs.root);
+            allFiles.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer group';
+                const isMap = f.name.endsWith('.json');
+                div.innerHTML = `
+                    <div class="text-3xl">${isMap ? '🗺️' : '📜'}</div>
+                    <span class="text-[10px] font-bold text-white truncate w-full text-center">${f.name}</span>
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.id}')` : `vfsOpenFile('${f.id}'); setEngineTab('script')`}">Open</button>
+                        <button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); vfsDeleteNode('${f.id}')">Del</button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function playCustomMap(fileId) {
+            const file = vfsGetNodeById(fileId);
+            if (!file) return;
+            applyMapDataToGame(JSON.parse(file.content));
+        }
+
+        // --- ToryScript Enhanced Engine ---
+        function runToryScript() {
+            saveActiveFile(false);
             const code = document.getElementById('tory-editor').value;
             const consoleEl = document.getElementById('tory-console');
-            consoleEl.innerHTML += `<br>> Running script...`;
+            consoleEl.innerHTML += `<br>> Executing ToryScript...`;
             
             try {
-                // ToryScript Interpreter (Sandboxed eval-like logic)
                 const api = {
+                    // Graphics/Map API
                     fill: (x, y, w, h, type) => {
                         const t = type === 'water' ? 0 : 1;
                         for (let i = y; i < y + h; i++) {
@@ -1456,8 +1713,8 @@ log("World Generated!");</pre>
                     },
                     circle: (x, y, r, type) => {
                         const t = type === 'water' ? 0 : 1;
-                        for (let i = y - r; i <= y + r; i++) {
-                            for (let j = x - r; j <= x + r; j++) {
+                        for (let i = Math.floor(y - r); i <= Math.ceil(y + r); i++) {
+                            for (let j = Math.floor(x - r); j <= Math.ceil(x + r); j++) {
                                 if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
                                     const dist = Math.sqrt(Math.pow(j - x, 2) + Math.pow(i - y, 2));
                                     if (dist <= r) state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = t;
@@ -1489,19 +1746,28 @@ log("World Generated!");</pre>
                         }
                     },
                     clear: () => state.engine.mapData.tileTypes.fill(1),
-                    log: (msg) => { consoleEl.innerHTML += `<br>> ${msg}`; }
+                    
+                    // Game State / Entity API
+                    getEntities: () => state.entities.map(e => ({ name: e.name, balance: e.balance, tiles: e.ownedCount })),
+                    setBalance: (amt) => { state.balance = amt; state.entities[1].balance = amt; updateUI(state.lastMaxBalance); },
+                    notify: (msg, type) => notify(msg, type),
+                    log: (msg) => { consoleEl.innerHTML += `<br>> ${msg}`; consoleEl.scrollTop = consoleEl.scrollHeight; },
+                    
+                    // Constants
+                    MAP_WIDTH: CONFIG.COLS,
+                    MAP_HEIGHT: CONFIG.ROWS,
+                    VERSION: state.version
                 };
 
-                // Create function from code
                 const scriptFunc = new Function(...Object.keys(api), code);
                 scriptFunc(...Object.values(api));
                 
                 drawEngineMap();
-                consoleEl.innerHTML += `<br>> Script executed successfully.`;
-                consoleEl.scrollTop = consoleEl.scrollHeight;
+                consoleEl.innerHTML += `<br>> ToryScript: Success.`;
             } catch (e) {
-                consoleEl.innerHTML += `<br><span class="text-red-500">> Error: ${e.message}</span>`;
+                consoleEl.innerHTML += `<br><span class="text-red-500">> Runtime Error: ${e.message}</span>`;
             }
+            consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
         function saveEngineFilesToStorage() {
