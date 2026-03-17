@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToyEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.7.0</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.8.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -920,6 +920,26 @@
                         </div>
 
                         <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">mountain(x, y, width, height)</code>
+                            <p class="text-slate-400 text-xs mt-2">Places permanent mountains (ID: -3). Cannot be painted or spawned on.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">war(hostIdx, targetIdx)</code>
+                            <p class="text-slate-400 text-xs mt-2">Forces a war declaration between two entities.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">alliance(idx1, idx2, active)</code>
+                            <p class="text-slate-400 text-xs mt-2">Creates or breaks an alliance (active: true/false).</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">faction(name, members_array)</code>
+                            <p class="text-slate-400 text-xs mt-2">Creates a formal faction with a list of entity indices.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                             <code class="text-blue-400 font-bold text-sm">island(x, y, radius, type)</code>
                             <p class="text-slate-400 text-xs mt-2">Creates a circular shape of tiles.</p>
                         </div>
@@ -994,7 +1014,7 @@ print("World Generated!");</pre>
     <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
             <div class="flex items-center justify-end mb-4">
-                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.7.0</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.8.0</span>
             </div>
             <h1 class="text-3xl font-black text-center text-blue-400 mb-6 italic tracking-tight">TERRITORY.IO</h1>
             
@@ -1274,7 +1294,7 @@ print("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.7.0', // Current version tag (Improved ToryScript & Map Loader)
+            version: '2.8.0', // Current version tag (Mountains & Logic Expansion)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1871,6 +1891,10 @@ print("World Generated!");</pre>
                 { pattern: /\bline\s*\(/g, replacement: 'drawLine(' },
                 { pattern: /\bget\s*\(/g, replacement: 'getTile(' },
                 { pattern: /\bset\s*\(/g, replacement: 'setTile(' },
+                { pattern: /\bmountain\s*\(/g, replacement: 'spawnMountain(' },
+                { pattern: /\bwar\s*\(/g, replacement: 'startWar(' },
+                { pattern: /\balliance\s*\(/g, replacement: 'setAlliance(' },
+                { pattern: /\bfaction\s*\(/g, replacement: 'createFaction(' },
                 { pattern: /\bresearch\s*\(/g, replacement: 'getResearch(' },
                 { pattern: /\bupgrade\s*\(/g, replacement: 'setResearch(' },
                 { pattern: /\bbot\s*\(/g, replacement: 'botLogic(' },
@@ -1942,9 +1966,27 @@ print("World Generated!");</pre>
                     },
                     setTile: (x, y, type) => {
                         if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
-                            const tMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6 };
+                            const tMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6, 'mountain': 7 };
                             state.engine.mapData.tileTypes[y * CONFIG.COLS + x] = tMap[type] !== undefined ? tMap[type] : 1;
                         }
+                    },
+                    spawnMountain: (x, y, w = 1, h = 1) => {
+                        for (let i = y; i < y + h; i++) {
+                            for (let j = x; j < x + w; j++) {
+                                if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
+                                    state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = 7;
+                                }
+                            }
+                        }
+                    },
+                    startWar: (host, target) => startJustification(host, target),
+                    setAlliance: (idx1, idx2, active) => {
+                        const key = `${Math.min(idx1, idx2)}-${Math.max(idx1, idx2)}`;
+                        if (active) state.alliances.add(key);
+                        else state.alliances.delete(key);
+                    },
+                    createFaction: (name, members) => {
+                        state.factions.push({ name, members });
                     },
                     noise: (scale = 0.1, threshold = 0.45) => {
                         for (let i = 0; i < CONFIG.ROWS; i++) {
@@ -2458,7 +2500,8 @@ print("World Generated!");</pre>
             DAM: '#06b6d4',
             CITY: '#f59e0b',
             CAPITAL: '#ef4444',
-            BUILDING: '#475569'
+            BUILDING: '#475569',
+            MOUNTAIN: '#1e293b'
         };
 
         function drawTile(x, y) {
@@ -2469,6 +2512,7 @@ print("World Generated!");</pre>
             let fill = COLORS.LAND;
             
             if (type === 0) fill = COLORS.WATER;
+            else if (type === 7) fill = COLORS.MOUNTAIN;
             else if (ownerIdx !== 0) {
                 if (type === 3) fill = COLORS.BRIDGE; // Bridge color
                 else if (type === 4) fill = COLORS.DAM; // Dam water color
@@ -2554,6 +2598,8 @@ print("World Generated!");</pre>
 
             if (flags & 32) { // Dam Icon (One per cluster)
                 ctx.font = '7px Arial'; ctx.fillText('⚡', cx, cy);
+            } else if (type === 7) { // Mountain
+                ctx.font = '8px Arial'; ctx.fillText('⛰️', cx, cy);
             } else if (type === 5) { // City
                 ctx.font = '8px Arial'; ctx.fillText('🏠', cx, cy);
             } else if (type === 6) { // Capital
@@ -2613,7 +2659,7 @@ print("World Generated!");</pre>
                     for (let y = 0; y < 6; y++) {
                         for (let x = 0; x < 6; x++) {
                             const idx = (tsy + y) * CONFIG.COLS + (tsx + x);
-                            if (state.tileTypes[idx] !== 1 || state.tileOwners[idx] !== 0) {
+                            if (state.tileTypes[idx] !== 1 || state.tileOwners[idx] !== 0 || state.tileTypes[idx] === 7) {
                                 isAreaValid = false; break;
                             }
                         }
@@ -2704,6 +2750,7 @@ print("World Generated!");</pre>
             if (x < 0 || x >= CONFIG.COLS || y < 0 || y >= CONFIG.ROWS) return;
             const idx = y * CONFIG.COLS + x;
             if (state.tileOwners[idx] === ownerIdx) return; // Already owned by us
+            if (state.tileTypes[idx] === 7) return; // Cannot claim mountains
             
             const entity = state.entities[ownerIdx];
             const isWater = state.tileTypes[idx] === 0 || state.tileTypes[idx] === 3 || state.tileTypes[idx] === 4;
@@ -3044,6 +3091,11 @@ print("World Generated!");</pre>
                     else if (state.tileTypes[idx] === 4) statusStr += ' (DAM)';
                     else if (state.tileTypes[idx] === 5) statusStr += ' (CITY)';
                     else if (state.tileTypes[idx] === 6) statusStr += ' (CAPITAL)';
+                    else if (state.tileTypes[idx] === 7) {
+                        statusStr += ' (MOUNTAIN)';
+                        const mtId = idx.toString().padStart(5, '0');
+                        statusStr += ` | mt${mtId} (-3)`;
+                    }
                 }
                 
                 document.getElementById('prof-seed').innerText = state.tileTypes[idx];
