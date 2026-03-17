@@ -755,20 +755,28 @@
     <!-- Sandbox Engine Modal -->
     <div id="sandbox-engine" class="hidden fixed inset-0 bg-slate-950 z-[1000] flex flex-col">
         <!-- Engine Header -->
-        <div class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
+        <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800/80 px-5 py-3 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <h2 class="text-xl font-black text-amber-500 italic uppercase tracking-tighter">ToryEngine</h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToyEngine Studio</h2>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.5.1</span>
+                </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
-                    <button onclick="setEngineTab('editor')" id="tab-engine-editor" class="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] font-bold uppercase">Map Editor</button>
-                    <button onclick="setEngineTab('toryscript')" id="tab-engine-script" class="px-4 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-[10px] font-bold uppercase">ToryScript</button>
-                    <button onclick="setEngineTab('docs')" id="tab-engine-docs" class="px-4 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-[10px] font-bold uppercase">Docs</button>
-                    <button onclick="setEngineTab('explorer')" id="tab-engine-explorer" class="px-4 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-[10px] font-bold uppercase">Explorer</button>
+                    <button onclick="setEngineTab('editor')" id="tab-engine-editor" class="px-4 py-1.5 rounded-lg border border-blue-500/40 bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wide">Map</button>
+                    <button onclick="setEngineTab('toryscript')" id="tab-engine-toryscript" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Script</button>
+                    <button onclick="setEngineTab('docs')" id="tab-engine-docs" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Docs</button>
+                    <button onclick="setEngineTab('explorer')" id="tab-engine-explorer" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide">Assets</button>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="saveEngineMap()" class="bg-emerald-600 px-4 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase">Save Map</button>
-                <button onclick="closeSandboxEngine()" class="bg-slate-800 px-4 py-1.5 rounded-lg text-slate-400 text-[10px] font-bold uppercase">Exit Engine</button>
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-2">
+                    <div class="px-2 py-1 rounded-md border border-slate-700 bg-slate-900 text-[9px] text-slate-300 font-mono uppercase">384 x 216</div>
+                    <div id="engine-status-brush" class="px-2 py-1 rounded-md border border-slate-700 bg-slate-900 text-[9px] text-cyan-300 font-mono uppercase">Brush: water</div>
+                    <div id="engine-status-file" class="px-2 py-1 rounded-md border border-slate-700 bg-slate-900 text-[9px] text-emerald-300 font-mono uppercase">File: main.tory</div>
+                </div>
+                <button onclick="saveEngineMap()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase border border-emerald-400/40 transition-colors">Save Map</button>
+                <button onclick="closeSandboxEngine()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg text-slate-300 text-[10px] font-bold uppercase border border-slate-700 transition-colors">Exit</button>
             </div>
         </div>
 
@@ -780,19 +788,22 @@
                     <canvas id="engine-canvas" class="absolute top-0 left-0"></canvas>
                 </div>
                 <!-- Toolbar -->
-                <div class="bg-slate-900 border-t border-slate-800 p-4 flex gap-4 items-center overflow-x-auto">
+                <div class="bg-gradient-to-t from-slate-950 to-slate-900 border-t border-slate-800 p-4 flex gap-4 items-center overflow-x-auto">
                     <div class="flex flex-col gap-1">
                         <span class="text-[8px] text-slate-500 font-bold uppercase">Brush Type</span>
                         <div class="flex gap-2">
-                            <button onclick="setEngineBrush('water')" id="brush-water" aria-label="Water brush" title="Water brush" class="w-8 h-8 rounded bg-blue-900 border border-blue-500/50"></button>
-                            <button onclick="setEngineBrush('land')" id="brush-land" aria-label="Land brush" title="Land brush" class="w-8 h-8 rounded bg-slate-800 border border-white/20"></button>
-                            <button onclick="setEngineBrush('city')" id="brush-city" class="w-8 h-8 rounded bg-amber-600 flex items-center justify-center text-xs">🏠</button>
-                            <button onclick="setEngineBrush('capital')" id="brush-capital" class="w-8 h-8 rounded bg-red-600 flex items-center justify-center text-xs">👑</button>
+                            <button onclick="setEngineBrush('water')" id="brush-water" aria-label="Water brush" title="Water brush" class="px-3 h-8 rounded border border-cyan-500/60 bg-blue-900 text-cyan-200 text-[10px] font-bold uppercase">Water</button>
+                            <button onclick="setEngineBrush('land')" id="brush-land" aria-label="Land brush" title="Land brush" class="px-3 h-8 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase">Land</button>
+                            <button onclick="setEngineBrush('city')" id="brush-city" aria-label="City brush" title="City brush" class="px-3 h-8 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase">City</button>
+                            <button onclick="setEngineBrush('capital')" id="brush-capital" aria-label="Capital brush" title="Capital brush" class="px-3 h-8 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase">Capital</button>
                         </div>
                     </div>
                     <div class="flex flex-col gap-1">
                         <span class="text-[8px] text-slate-500 font-bold uppercase">Brush Size</span>
-                        <input type="range" id="engine-brush-size" min="1" max="10" value="1" aria-label="Brush size" title="Brush size" class="w-24">
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="engine-brush-size" min="1" max="10" value="1" aria-label="Brush size" title="Brush size" class="w-24 accent-blue-500">
+                            <span id="engine-brush-size-value" class="w-6 text-[10px] text-slate-300 font-mono text-right">1</span>
+                        </div>
                     </div>
                     <div class="ml-auto text-[10px] text-slate-500 font-mono" id="engine-coords">X: 0, Y: 0</div>
                 </div>
@@ -822,7 +833,7 @@
                     </div>
                     <textarea id="tory-editor" spellcheck="false" class="flex-1 bg-slate-950 text-slate-300 font-mono text-sm p-6 outline-none resize-none whitespace-pre overflow-x-auto" placeholder="// ToryScript - Automate your map creation\n// Example: fill(0, 0, 10, 10, 'water')"></textarea>
                     <div id="tory-console" class="h-32 bg-black border-t border-slate-800 p-4 font-mono text-[10px] text-emerald-500 overflow-y-auto">
-                        > ToryScript Engine v2.5.0 Initialized.
+                        > ToryScript Engine v2.5.1 Initialized.
                     </div>
                 </div>
             </div>
@@ -1309,18 +1320,22 @@ log("World Generated!");</pre>
             engineModal.classList.remove('hidden');
             
             if (!state.engine.initialized) {
-                // Load files from localStorage if available
-                const savedFiles = localStorage.getItem('tory_engine_files');
-                if (savedFiles) {
+                const savedVfs = localStorage.getItem('tory_engine_vfs');
+                if (savedVfs) {
                     try {
-                        state.engine.files = JSON.parse(savedFiles);
-                    } catch (e) { console.error("Failed to load engine files", e); }
+                        const parsed = JSON.parse(savedVfs);
+                        if (parsed?.root && parsed?.activeFileId) state.engine.vfs = parsed;
+                    } catch (e) { console.error("Failed to load engine VFS", e); }
                 }
                 initSandboxEngine();
             }
             
+            updateVFSTree();
+            loadActiveFile();
             updateEngineExplorer();
-            updateToryFileList();
+            setEngineBrush(state.engine.brush);
+            setEngineTab(state.engine.activeTab);
+            updateEngineStatus();
         }
 
         function closeSandboxEngine() {
@@ -1358,7 +1373,14 @@ log("World Generated!");</pre>
 
             eCanvas.addEventListener('mousedown', (e) => { state.engine.isInteracting = true; handleEngineMove(e); });
             eCanvas.addEventListener('mousemove', handleEngineMove);
+            eCanvas.addEventListener('mouseleave', handleEngineUp);
             window.addEventListener('mouseup', handleEngineUp);
+
+            const brushSizeInput = document.getElementById('engine-brush-size');
+            brushSizeInput.addEventListener('input', () => {
+                document.getElementById('engine-brush-size-value').innerText = brushSizeInput.value;
+            });
+            document.getElementById('engine-brush-size-value').innerText = brushSizeInput.value;
             
             state.engine.initialized = true;
         }
@@ -1383,13 +1405,27 @@ log("World Generated!");</pre>
                     if (type === 6) { eCtx.fillStyle = 'white'; eCtx.font = '9px Arial'; eCtx.textAlign = 'center'; eCtx.fillText('👑', (x+0.5)*CONFIG.TILE_SIZE, (y+0.5)*CONFIG.TILE_SIZE); }
                 }
             }
+            updateEngineStatus();
+        }
+
+        function updateEngineStatus() {
+            const brushEl = document.getElementById('engine-status-brush');
+            const fileEl = document.getElementById('engine-status-file');
+            if (brushEl) brushEl.innerText = `Brush: ${state.engine.brush}`;
+            const activeFile = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (fileEl) fileEl.innerText = `File: ${activeFile?.name || 'none'}`;
         }
 
         function setEngineBrush(type) {
             state.engine.brush = type;
             ['water', 'land', 'city', 'capital'].forEach(b => {
-                document.getElementById(`brush-${b}`).style.borderColor = b === type ? '#3b82f6' : 'rgba(255,255,255,0.2)';
+                const btn = document.getElementById(`brush-${b}`);
+                if (!btn) return;
+                btn.className = b === type
+                    ? 'px-3 h-8 rounded border border-blue-400 bg-blue-600/20 text-blue-300 text-[10px] font-bold uppercase'
+                    : 'px-3 h-8 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase';
             });
+            updateEngineStatus();
         }
 
         function applyEngineBrush(x, y) {
@@ -1435,10 +1471,12 @@ log("World Generated!");</pre>
 
         function setEngineTab(tab) {
             state.engine.activeTab = tab;
-            ['editor', 'script', 'docs', 'explorer'].forEach(t => {
+            ['editor', 'toryscript', 'docs', 'explorer'].forEach(t => {
                 const btn = document.getElementById(`tab-engine-${t}`);
-                const panel = document.getElementById(`engine-content-${t === 'script' ? 'toryscript' : (t === 'docs' ? 'docs' : t)}`);
-                if (btn) btn.className = t === tab ? 'px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] font-bold uppercase' : 'px-4 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-[10px] font-bold uppercase';
+                const panel = document.getElementById(`engine-content-${t}`);
+                if (btn) btn.className = t === tab
+                    ? 'px-4 py-1.5 rounded-lg border border-blue-500/40 bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wide'
+                    : 'px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide';
                 if (panel) panel.classList.toggle('hidden', t !== tab);
             });
             if (tab === 'explorer') updateEngineExplorer();
@@ -1547,8 +1585,9 @@ log("World Generated!");</pre>
             if (file.name.endsWith('.json')) {
                 setEngineTab('editor');
             } else {
-                setEngineTab('script');
+                setEngineTab('toryscript');
             }
+            updateEngineStatus();
         }
 
         function saveActiveFile(showNotify = true) {
@@ -1557,6 +1596,7 @@ log("World Generated!");</pre>
                 file.content = document.getElementById('tory-editor').value;
                 localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
                 if (showNotify) notify(`Saved ${file.name}`, 'success');
+                updateEngineStatus();
             }
         }
 
@@ -1646,6 +1686,7 @@ log("World Generated!");</pre>
             // Add to maps folder if it exists
             const mapsFolder = vfsGetNodeById('f2') || state.engine.vfs.root;
             mapsFolder.children.push(newNode);
+            localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
             
             // Download also
             const blob = new Blob([json], { type: 'application/json' });
@@ -1654,6 +1695,7 @@ log("World Generated!");</pre>
             a.href = url; a.download = `${name}.json`; a.click();
             
             updateVFSTree();
+            updateEngineStatus();
             notify("Map saved to VFS and downloaded!", "success");
         }
 
@@ -1677,7 +1719,7 @@ log("World Generated!");</pre>
                     <div class="text-3xl">${isMap ? '🗺️' : '📜'}</div>
                     <span class="text-[10px] font-bold text-white truncate w-full text-center">${f.name}</span>
                     <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.id}')` : `vfsOpenFile('${f.id}'); setEngineTab('script')`}">Open</button>
+                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.id}')` : `vfsOpenFile('${f.id}'); setEngineTab('toryscript')`}">Open</button>
                         <button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); vfsDeleteNode('${f.id}')">Del</button>
                     </div>
                 `;
@@ -1770,120 +1812,6 @@ log("World Generated!");</pre>
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
-        function saveEngineFilesToStorage() {
-            localStorage.setItem('tory_engine_files', JSON.stringify(state.engine.files));
-        }
-
-        function createNewToryFile() {
-            const name = prompt("Enter filename (e.g. custom.tory):", "new_script.tory");
-            if (!name) return;
-            state.engine.files.push({ name: name.endsWith('.tory') ? name : name + '.tory', content: '', type: 'script' });
-            saveEngineFilesToStorage();
-            updateToryFileList();
-            updateEngineExplorer();
-        }
-
-        function updateToryFileList() {
-            const list = document.getElementById('tory-file-list');
-            if (!list) return;
-            list.innerHTML = '';
-            state.engine.files.filter(f => f.name.endsWith('.tory')).forEach(f => {
-                const div = document.createElement('div');
-                div.className = `p-2 rounded text-[10px] font-mono cursor-pointer transition-colors ${state.engine.activeFile === f.name ? 'bg-blue-600/20 text-blue-400' : 'text-slate-500 hover:bg-slate-800'}`;
-                div.innerText = f.name;
-                div.onclick = () => loadToryFile(f.name);
-                list.appendChild(div);
-            });
-        }
-
-        function loadToryFile(name) {
-            const file = state.engine.files.find(f => f.name === name);
-            if (!file) return;
-            
-            // Sync current editor content back to file before switching
-            if (state.engine.activeFile) {
-                const currentFile = state.engine.files.find(f => f.name === state.engine.activeFile);
-                if (currentFile) currentFile.content = document.getElementById('tory-editor').value;
-            }
-
-            state.engine.activeFile = name;
-            document.getElementById('tory-editor').value = file.content;
-            document.getElementById('active-tory-filename').innerText = name;
-            updateToryFileList();
-        }
-
-        function saveToryScript() {
-            if (!state.engine.activeFile) {
-                createNewToryFile();
-                if (!state.engine.activeFile) return;
-            }
-            const file = state.engine.files.find(f => f.name === state.engine.activeFile);
-            if (file) {
-                file.content = document.getElementById('tory-editor').value;
-                saveEngineFilesToStorage();
-                notify(`Saved ${file.name}`, 'success');
-                updateEngineExplorer();
-            }
-        }
-
-        function saveEngineMap() {
-            const name = prompt("Enter map name:", "custom_map");
-            if (!name) return;
-            
-            const cityIndices = [];
-            let capitalIdx = null;
-            state.engine.mapData.tileTypes.forEach((t, i) => {
-                if (t === 5) cityIndices.push(i);
-                if (t === 6) capitalIdx = i;
-            });
-
-            const mapData = {
-                name: name,
-                version: state.version,
-                tileTypes: Array.from(state.engine.mapData.tileTypes),
-                cityIndices: cityIndices,
-                capitalIdx: capitalIdx
-            };
-
-            const blob = new Blob([JSON.stringify(mapData)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${name}.json`;
-            a.click();
-            
-            // Add to virtual explorer
-            state.engine.files.push({ name: `${name}.json`, content: JSON.stringify(mapData), type: 'map' });
-            notify("Map saved and downloaded!", "success");
-        }
-
-        function updateEngineExplorer() {
-            const grid = document.getElementById('explorer-grid');
-            grid.innerHTML = '';
-            state.engine.files.forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer group';
-                const isMap = f.name.endsWith('.json');
-                div.innerHTML = `
-                    <div class="text-3xl">${isMap ? '🗺️' : '📜'}</div>
-                    <span class="text-[10px] font-bold text-white truncate w-full text-center">${f.name}</span>
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.name}')` : `loadToryFile('${f.name}'); setEngineTab('toryscript')`}">Open</button>
-                        <button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); deleteVirtualFile('${f.name}')">Del</button>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-
-        function deleteVirtualFile(name) {
-            state.engine.files = state.engine.files.filter(f => f.name !== name);
-            if (state.engine.activeFile === name) state.engine.activeFile = null;
-            saveEngineFilesToStorage();
-            updateEngineExplorer();
-            updateToryFileList();
-        }
-
         function loadCustomMap(input) {
             const file = input.files[0];
             if (!file) return;
@@ -1897,12 +1825,6 @@ log("World Generated!");</pre>
                 }
             };
             reader.readAsText(file);
-        }
-
-        function playCustomMap(filename) {
-            const file = state.engine.files.find(f => f.name === filename);
-            if (!file) return;
-            applyMapDataToGame(JSON.parse(f.content));
         }
 
         function applyMapDataToGame(data) {
