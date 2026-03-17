@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToyEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.8.0</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.9.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -1014,7 +1014,7 @@ print("World Generated!");</pre>
     <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
             <div class="flex items-center justify-end mb-4">
-                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.8.0</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.9.0</span>
             </div>
             <h1 class="text-3xl font-black text-center text-blue-400 mb-6 italic tracking-tight">TERRITORY.IO</h1>
             
@@ -1294,7 +1294,7 @@ print("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.8.0', // Current version tag (Mountains & Logic Expansion)
+            version: '2.9.0', // Current version tag (Global API & postMessage)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1909,160 +1909,187 @@ print("World Generated!");</pre>
             return compiled;
         }
 
+        const ToryScript = {
+            api: (customLog) => ({
+                // Graphics/Map API
+                fill: (x, y, w, h, type) => {
+                    const t = type === 'water' ? 0 : 1;
+                    for (let i = y; i < y + h; i++) {
+                        for (let j = x; j < x + w; j++) {
+                            if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
+                                (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[i * CONFIG.COLS + j] = t;
+                            }
+                        }
+                    }
+                },
+                circle: (x, y, r, type) => {
+                    const t = type === 'water' ? 0 : 1;
+                    for (let i = Math.floor(y - r); i <= Math.ceil(y + r); i++) {
+                        for (let j = Math.floor(x - r); j <= Math.ceil(x + r); j++) {
+                            if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
+                                const dist = Math.sqrt(Math.pow(j - x, 2) + Math.pow(i - y, 2));
+                                if (dist <= r) (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[i * CONFIG.COLS + j] = t;
+                            }
+                        }
+                    }
+                },
+                drawLine: (x1, y1, x2, y2, type) => {
+                    const t = type === 'water' ? 0 : 1;
+                    const dx = Math.abs(x2 - x1);
+                    const dy = Math.abs(y2 - y1);
+                    const sx = (x1 < x2) ? 1 : -1;
+                    const sy = (y1 < y2) ? 1 : -1;
+                    let err = dx - dy;
+                    while (true) {
+                        if (x1 >= 0 && x1 < CONFIG.COLS && y1 >= 0 && y1 < CONFIG.ROWS) {
+                            (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[y1 * CONFIG.COLS + x1] = t;
+                        }
+                        if (x1 === x2 && y1 === y2) break;
+                        const e2 = 2 * err;
+                        if (e2 > -dy) { err -= dy; x1 += sx; }
+                        if (e2 < dx) { err += dx; y1 += sy; }
+                    }
+                },
+                getTile: (x, y) => {
+                    if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                        const t = (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[y * CONFIG.COLS + x];
+                        return t === 0 ? 'water' : (t === 5 ? 'city' : (t === 6 ? 'capital' : (t === 7 ? 'mountain' : 'land')));
+                    }
+                    return null;
+                },
+                setTile: (x, y, type) => {
+                    if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                        const tMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6, 'mountain': 7 };
+                        (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[y * CONFIG.COLS + x] = tMap[type] !== undefined ? tMap[type] : 1;
+                    }
+                },
+                spawnMountain: (x, y, w = 1, h = 1) => {
+                    for (let i = y; i < y + h; i++) {
+                        for (let j = x; j < x + w; j++) {
+                            if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
+                                (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[i * CONFIG.COLS + j] = 7;
+                            }
+                        }
+                    }
+                },
+                startWar: (host, target) => startJustification(host, target),
+                setAlliance: (idx1, idx2, active) => {
+                    const key = `${Math.min(idx1, idx2)}-${Math.max(idx1, idx2)}`;
+                    if (active) state.alliances.add(key);
+                    else state.alliances.delete(key);
+                },
+                createFaction: (name, members) => {
+                    state.factions.push({ name, members });
+                },
+                noise: (scale = 0.1, threshold = 0.45) => {
+                    for (let i = 0; i < CONFIG.ROWS; i++) {
+                        for (let j = 0; j < CONFIG.COLS; j++) {
+                            const val = Math.sin(j * scale) * Math.cos(i * scale);
+                            (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[i * CONFIG.COLS + j] = val > threshold ? 0 : 1;
+                        }
+                    }
+                },
+                spawnCity: (x, y) => {
+                    if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                        (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes)[y * CONFIG.COLS + x] = 5;
+                    }
+                },
+                spawnCapital: (x, y) => {
+                    if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
+                        const idx = y * CONFIG.COLS + x;
+                        if (state.engine.initialized) {
+                            if (state.engine.mapData.capitalIdx !== null) state.engine.mapData.tileTypes[state.engine.mapData.capitalIdx] = 1;
+                            state.engine.mapData.tileTypes[idx] = 6;
+                            state.engine.mapData.capitalIdx = idx;
+                        } else {
+                            if (state.entities[1].capitalPos) {
+                                const oldIdx = state.entities[1].capitalPos.y * CONFIG.COLS + state.entities[1].capitalPos.x;
+                                state.tileTypes[oldIdx] = 1;
+                            }
+                            state.tileTypes[idx] = 6;
+                            state.entities[1].capitalPos = {x, y};
+                        }
+                    }
+                },
+                clear: () => (state.engine.initialized ? state.engine.mapData.tileTypes : state.tileTypes).fill(1),
+                getResearch: (tree, key) => state.research.trees[tree]?.[key] || 0,
+                setResearch: (tree, key, val) => { 
+                    if (state.research.trees[tree]) {
+                        state.research.trees[tree][key] = val;
+                        updateResearchUI();
+                    }
+                },
+                botLogic: (idx, prop, val) => {
+                    const bot = state.entities[idx];
+                    if (!bot || bot.type !== 'bot') return null;
+                    if (val !== undefined) bot[prop] = val;
+                    return bot[prop];
+                },
+                playerLogic: (prop, val) => {
+                    const player = state.entities[1];
+                    if (val !== undefined) {
+                        player[prop] = val;
+                        if (prop === 'balance') state.balance = val;
+                        updateUI(state.lastMaxBalance);
+                    }
+                    return player[prop];
+                },
+                getEntityById: (id) => {
+                    const ent = state.entities.find(e => e.id === id);
+                    return ent ? { idx: state.entities.indexOf(ent), name: ent.name, type: ent.type } : null;
+                },
+                random: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+                getEntities: () => state.entities.map((e, i) => ({ idx: i, id: e.id, name: e.name, balance: e.balance, tiles: e.ownedCount })),
+                setBalance: (amt) => { state.balance = amt; state.entities[1].balance = amt; updateUI(state.lastMaxBalance); },
+                notify: (msg, type) => notify(msg, type),
+                log: (msg) => { 
+                    if (customLog) customLog(msg);
+                    else console.log(`[ToryScript] ${msg}`); 
+                },
+                MAP_WIDTH: CONFIG.COLS,
+                MAP_HEIGHT: CONFIG.ROWS,
+                VERSION: state.version
+            }),
+            run: (code, options = {}) => {
+                const compiled = compileToryScript(code);
+                const api = ToryScript.api(options.onLog);
+                try {
+                    const scriptFunc = new Function(...Object.keys(api), compiled);
+                    scriptFunc(...Object.values(api));
+                    if (state.engine.initialized) drawEngineMap();
+                    else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
+                    return { success: true };
+                } catch (e) {
+                    if (options.onLog) options.onLog(`Runtime Error: ${e.message}`);
+                    return { success: false, error: e.message };
+                }
+            }
+        };
+        window.ToryScript = ToryScript; // Expose to global scope
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'TORYSCRIPT_EXEC') {
+                ToryScript.run(event.data.code);
+            }
+        });
+
         function runToryScript() {
             saveActiveFile(false);
             const originalCode = document.getElementById('tory-editor').value;
-            const compiledCode = compileToryScript(originalCode);
             const consoleEl = document.getElementById('tory-console');
             consoleEl.innerHTML += `<br>> Executing ToryScript...`;
             
-            try {
-                const api = {
-                    // Graphics/Map API
-                    fill: (x, y, w, h, type) => {
-                        const t = type === 'water' ? 0 : 1;
-                        for (let i = y; i < y + h; i++) {
-                            for (let j = x; j < x + w; j++) {
-                                if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
-                                    state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = t;
-                                }
-                            }
-                        }
-                    },
-                    circle: (x, y, r, type) => {
-                        const t = type === 'water' ? 0 : 1;
-                        for (let i = Math.floor(y - r); i <= Math.ceil(y + r); i++) {
-                            for (let j = Math.floor(x - r); j <= Math.ceil(x + r); j++) {
-                                if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
-                                    const dist = Math.sqrt(Math.pow(j - x, 2) + Math.pow(i - y, 2));
-                                    if (dist <= r) state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = t;
-                                }
-                            }
-                        }
-                    },
-                    drawLine: (x1, y1, x2, y2, type) => {
-                        const t = type === 'water' ? 0 : 1;
-                        const dx = Math.abs(x2 - x1);
-                        const dy = Math.abs(y2 - y1);
-                        const sx = (x1 < x2) ? 1 : -1;
-                        const sy = (y1 < y2) ? 1 : -1;
-                        let err = dx - dy;
-                        while (true) {
-                            if (x1 >= 0 && x1 < CONFIG.COLS && y1 >= 0 && y1 < CONFIG.ROWS) {
-                                state.engine.mapData.tileTypes[y1 * CONFIG.COLS + x1] = t;
-                            }
-                            if (x1 === x2 && y1 === y2) break;
-                            const e2 = 2 * err;
-                            if (e2 > -dy) { err -= dy; x1 += sx; }
-                            if (e2 < dx) { err += dx; y1 += sy; }
-                        }
-                    },
-                    getTile: (x, y) => {
-                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
-                            const t = state.engine.mapData.tileTypes[y * CONFIG.COLS + x];
-                            return t === 0 ? 'water' : (t === 5 ? 'city' : (t === 6 ? 'capital' : 'land'));
-                        }
-                        return null;
-                    },
-                    setTile: (x, y, type) => {
-                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
-                            const tMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6, 'mountain': 7 };
-                            state.engine.mapData.tileTypes[y * CONFIG.COLS + x] = tMap[type] !== undefined ? tMap[type] : 1;
-                        }
-                    },
-                    spawnMountain: (x, y, w = 1, h = 1) => {
-                        for (let i = y; i < y + h; i++) {
-                            for (let j = x; j < x + w; j++) {
-                                if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) {
-                                    state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = 7;
-                                }
-                            }
-                        }
-                    },
-                    startWar: (host, target) => startJustification(host, target),
-                    setAlliance: (idx1, idx2, active) => {
-                        const key = `${Math.min(idx1, idx2)}-${Math.max(idx1, idx2)}`;
-                        if (active) state.alliances.add(key);
-                        else state.alliances.delete(key);
-                    },
-                    createFaction: (name, members) => {
-                        state.factions.push({ name, members });
-                    },
-                    noise: (scale = 0.1, threshold = 0.45) => {
-                        for (let i = 0; i < CONFIG.ROWS; i++) {
-                            for (let j = 0; j < CONFIG.COLS; j++) {
-                                const val = Math.sin(j * scale) * Math.cos(i * scale);
-                                state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = val > threshold ? 0 : 1;
-                            }
-                        }
-                    },
-                    spawnCity: (x, y) => {
-                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
-                            state.engine.mapData.tileTypes[y * CONFIG.COLS + x] = 5;
-                        }
-                    },
-                    spawnCapital: (x, y) => {
-                        if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
-                            const idx = y * CONFIG.COLS + x;
-                            if (state.engine.mapData.capitalIdx !== null) {
-                                state.engine.mapData.tileTypes[state.engine.mapData.capitalIdx] = 1;
-                            }
-                            state.engine.mapData.tileTypes[idx] = 6;
-                            state.engine.mapData.capitalIdx = idx;
-                        }
-                    },
-                    clear: () => state.engine.mapData.tileTypes.fill(1),
-                    
-                    // --- Extended Logic API ---
-                    getResearch: (tree, key) => state.research.trees[tree]?.[key] || 0,
-                    setResearch: (tree, key, val) => { 
-                        if (state.research.trees[tree]) {
-                            state.research.trees[tree][key] = val;
-                            updateResearchUI();
-                        }
-                    },
-                    botLogic: (idx, prop, val) => {
-                        const bot = state.entities[idx];
-                        if (!bot || bot.type !== 'bot') return null;
-                        if (val !== undefined) bot[prop] = val;
-                        return bot[prop];
-                    },
-                    playerLogic: (prop, val) => {
-                        const player = state.entities[1];
-                        if (val !== undefined) {
-                            player[prop] = val;
-                            if (prop === 'balance') state.balance = val;
-                            updateUI(state.lastMaxBalance);
-                        }
-                        return player[prop];
-                    },
-                    getEntityById: (id) => {
-                        const ent = state.entities.find(e => e.id === id);
-                        return ent ? { idx: state.entities.indexOf(ent), name: ent.name, type: ent.type } : null;
-                    },
+            const result = ToryScript.run(originalCode, {
+                onLog: (msg) => {
+                    consoleEl.innerHTML += `<br>> ${msg}`;
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                }
+            });
 
-                    // Helpers
-                    random: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-                    
-                    // Game State / Entity API
-                    getEntities: () => state.entities.map((e, i) => ({ idx: i, id: e.id, name: e.name, balance: e.balance, tiles: e.ownedCount })),
-                    setBalance: (amt) => { state.balance = amt; state.entities[1].balance = amt; updateUI(state.lastMaxBalance); },
-                    notify: (msg, type) => notify(msg, type),
-                    log: (msg) => { consoleEl.innerHTML += `<br>> ${msg}`; consoleEl.scrollTop = consoleEl.scrollHeight; },
-                    
-                    // Constants
-                    MAP_WIDTH: CONFIG.COLS,
-                    MAP_HEIGHT: CONFIG.ROWS,
-                    VERSION: state.version
-                };
-
-                const scriptFunc = new Function(...Object.keys(api), compiledCode);
-                scriptFunc(...Object.values(api));
-                
-                drawEngineMap();
+            if (result.success) {
                 consoleEl.innerHTML += `<br>> ToryScript: Success.`;
-            } catch (e) {
-                consoleEl.innerHTML += `<br><span class="text-red-500">> Runtime Error: ${e.message}</span>`;
+            } else {
+                consoleEl.innerHTML += `<br><span class="text-red-500">> Error: ${result.error}</span>`;
             }
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
