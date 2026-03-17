@@ -1014,7 +1014,7 @@
         };
 
         const state = {
-            version: '2.3.1', // Current version tag
+            version: '2.3.2', // Current version tag (Performance Optimizations)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1068,6 +1068,7 @@
             damCount: 0, // Number of unique dam clusters
             cityIndices: new Set(),
             damIndices: new Set(),
+            bordersByOwner: [], // Array of Sets for each entityIdx
             hasCapital: false,
             cycleTimer: 0,
             lastTick: Date.now(),
@@ -1310,6 +1311,9 @@
                         }
                     });
                 }
+
+                // Initialize bordersByOwner for all entities
+                state.bordersByOwner = Array.from({ length: state.entities.length }, () => new Set());
             } else {
                 const user = document.getElementById('multi-username').value.trim();
                 const pass = document.getElementById('multi-password').value.trim();
@@ -1656,6 +1660,7 @@
 
             // Update ownership
             const oldOwnerIdx = state.tileOwners[idx];
+            if (oldOwnerIdx > 0) state.bordersByOwner[oldOwnerIdx].delete(idx);
             state.tileOwners[idx] = ownerIdx;
 
             // Record Capture for Peace Terms
@@ -1708,6 +1713,12 @@
             if (ownerIdx === 1) {
                 state.ownedCount++;
                 state.entities[1].ownedCount = state.ownedCount; // Keep in sync
+                
+                // Update Bounding Box incrementally
+                state.bounds.minX = Math.min(state.bounds.minX, x);
+                state.bounds.maxX = Math.max(state.bounds.maxX, x);
+                state.bounds.minY = Math.min(state.bounds.minY, y);
+                state.bounds.maxY = Math.max(state.bounds.maxY, y);
             }
 
             // Update borders (rre5)
@@ -1727,7 +1738,6 @@
                 state.balance -= currentCost; 
                 state.entities[1].balance = state.balance; // Keep in sync
                 entity.tileCost += 0.25; 
-                state.needsDamCheck = true; 
             } else if (ownerIdx !== 1 && !free) {
                 // For bots, subtract from their balance and increment their tileCost
                 entity.balance -= currentCost;
@@ -1766,13 +1776,17 @@
 
             if (isBorder) {
                 state.tileFlags[idx] |= 16; // Set rre5 bit
+                state.bordersByOwner[ownerIdx].add(idx); // Add to border tracking
             } else {
                 state.tileFlags[idx] &= ~16; // Clear rre5 bit
+                state.bordersByOwner[ownerIdx].delete(idx); // No longer a border
             }
             if (!suppressDraw) drawTile(x, y);
         }
 
         function checkForDams() {
+            // Optimization: Maintain waterIndices or use a pre-filtered list
+            // For now, still scanning, but we will call this less often.
             let waterIndices = [];
             for (let i = 0; i < state.tileTypes.length; i++) {
                 if (state.tileTypes[i] === 0 || state.tileTypes[i] === 4) waterIndices.push(i);
@@ -3747,6 +3761,7 @@
                 }
 
                 if (state.cycleTimer >= CONFIG.CYCLE) {
+                    state.needsDamCheck = true;
                     const bonus = totalIncome + (state.ownedCount * 2);
                     if (state.balance !== Infinity) {
                         state.balance = Math.min(maxBalance, state.balance + bonus);
@@ -3765,16 +3780,6 @@
                 // --- Bot AI & Economy ---
                 let anyInsaneExpanded = false;
                 
-                // Optimization: Scan for all borders once per tick instead of per bot
-                const bordersByOwner = {};
-                for (let t = 0; t < state.tileOwners.length; t++) {
-                    const owner = state.tileOwners[t];
-                    if (owner > 1 && (state.tileFlags[t] & 16)) {
-                        if (!bordersByOwner[owner]) bordersByOwner[owner] = [];
-                        bordersByOwner[owner].push(t);
-                    }
-                }
-
                 for (let i = 2; i < state.entities.length; i++) {
                     const bot = state.entities[i];
                     if (bot.ownedCount === 0) continue;
@@ -3811,7 +3816,7 @@
                         else if (difficulty === 'hard') expandCount = 8;
                         else if (difficulty === 'insane') expandCount = 4; // Lower per-tick for performance, but higher overall
 
-                        const ownedBorders = bordersByOwner[i] || [];
+                        const ownedBorders = Array.from(state.bordersByOwner[i]);
                         
                         if (ownedBorders.length > 0) {
                             // Insane Bot Dam Logic: Proactively try to enclose water
@@ -3930,13 +3935,14 @@
                             }
                         }
 
-                        // Bot Economy: Cities (Only on cycle 0 to avoid city spam)
+                        // Bot Economy: Cities (Only on cycle 0)
                         if (state.cycleTimer === 0 && bot.balance >= 1000 && bot.cityCount < 5) {
-                            // Find a random internal owned land tile
-                            const internal = [];
-                            for(let t=0; t<state.tileTypes.length; t++) if(state.tileOwners[t] === i && !(state.tileFlags[t] & 16) && state.tileTypes[t] === 2) internal.push(t);
-                            if (internal.length > 0) {
-                                const cityIdx = internal[Math.floor(Math.random() * internal.length)];
+                            // Find a random border tile and look for land neighbors that are not borders
+                            const potentialCitySpots = ownedBorders.filter(idx => !(state.tileFlags[idx] & 16) && state.tileTypes[idx] === 2);
+                            // Fallback: use a random border tile and look for neighbors
+                            const cityIdx = potentialCitySpots.length > 0 ? potentialCitySpots[Math.floor(Math.random() * potentialCitySpots.length)] : ownedBorders[Math.floor(Math.random() * ownedBorders.length)];
+                            
+                            if (cityIdx !== undefined) {
                                 bot.balance -= 1000;
                                 state.tileTypes[cityIdx] = 5;
                                 bot.cityCount++;
@@ -3946,7 +3952,6 @@
                         }
                     }
                 }
-                if (anyInsaneExpanded || state.cycleTimer === 0) state.needsDamCheck = true;
             }
         }
         requestAnimationFrame(gameLoop);
@@ -4809,7 +4814,7 @@
             notify("Investment successful!", "success");
         }
 
-        function calculatePowerIndex(entityIdx) {
+        function calculatePowerIndex(entityIdx, precalcAllianceCount = -1) {
             const e = state.entities[entityIdx];
             if (!e || e.ownedCount === 0) return 0;
 
@@ -4843,11 +4848,14 @@
             const damScore = (e.damCount || 0) / 10;
 
             // 8. Diplomacy (Allies) Factor
-            let allianceCount = 0;
-            state.alliances.forEach(pair => {
-                const parts = pair.split('-');
-                if (parts.includes(entityIdx.toString())) allianceCount++;
-            });
+            let allianceCount = precalcAllianceCount;
+            if (allianceCount === -1) {
+                allianceCount = 0;
+                state.alliances.forEach(pair => {
+                    const parts = pair.split('-');
+                    if (parts.includes(entityIdx.toString())) allianceCount++;
+                });
+            }
             const allianceScore = allianceCount * 0.25;
 
             // 9. Research & Capabilities Factor
@@ -4914,6 +4922,16 @@
                 }
             });
 
+            // Pre-calculate alliance counts for all entities
+            const allianceCounts = new Uint16Array(state.entities.length);
+            state.alliances.forEach(pair => {
+                const parts = pair.split('-');
+                if (parts.length === 2) {
+                    allianceCounts[parseInt(parts[0])]++;
+                    allianceCounts[parseInt(parts[1])]++;
+                }
+            });
+
             // Update final values and calculate financial metrics
             state.entities.forEach((entity, eIdx) => {
                 if (eIdx === 0) return;
@@ -4954,7 +4972,7 @@
                 }
 
                 // 3. Calculate Power Index
-                entity.powerIndex = calculatePowerIndex(eIdx);
+                entity.powerIndex = calculatePowerIndex(eIdx, allianceCounts[eIdx]);
             });
 
             // Prepare list of entities (excluding WILD)
@@ -5581,6 +5599,7 @@
             entity.cityCount = 0;
             entity.hasCapital = false;
             entity.capitalPos = null;
+            if (state.bordersByOwner[eIdx]) state.bordersByOwner[eIdx].clear();
 
             // Remove cities from global set
             const cityIndicesToRemove = [];
@@ -5620,64 +5639,22 @@
         function updateLabel() {
             if (state.ownedCount === 0) return;
 
-            // Find all owned indices
-            const ownedIndices = [];
-            for (let i = 0; i < state.tileTypes.length; i++) {
-                if (state.tileOwners[i] === 1 && state.tileTypes[i] >= 2) ownedIndices.push(i);
+            // Simple Optimization: If player has a capital, center label on it
+            if (state.entities[1].hasCapital && state.entities[1].capitalPos) {
+                const { x, y } = state.entities[1].capitalPos;
+                label.style.left = `${(x + 0.5) * CONFIG.TILE_SIZE}px`;
+                label.style.top = `${(y + 0.5) * CONFIG.TILE_SIZE}px`;
+                label.style.transform = `translate(-50%, -50%)`;
+                return;
             }
 
-            if (ownedIndices.length === 0) return;
-
-            // Cluster owned tiles to find the biggest bunch
-            let clusters = [];
-            let checked = new Set();
-            
-            for (let idx of ownedIndices) {
-                if (checked.has(idx)) continue;
-                
-                let cluster = [];
-                let queue = [idx];
-                checked.add(idx);
-                
-                while (queue.length > 0) {
-                    let curr = queue.shift();
-                    cluster.push(curr);
-                    
-                    let cx = curr % CONFIG.COLS, cy = Math.floor(curr / CONFIG.COLS);
-                    const neighbors = [
-                        {x: cx-1, y: cy}, {x: cx+1, y: cy}, 
-                        {x: cx, y: cy-1}, {x: cx, y: cy+1}
-                    ];
-                    
-                    for (let n of neighbors) {
-                        if (n.x < 0 || n.x >= CONFIG.COLS || n.y < 0 || n.y >= CONFIG.ROWS) continue;
-                        let nIdx = n.y * CONFIG.COLS + n.x;
-                        if (state.tileTypes[nIdx] >= 2 && !checked.has(nIdx)) {
-                            checked.add(nIdx);
-                            queue.push(nIdx);
-                        }
-                    }
-                }
-                clusters.push(cluster);
+            // Fallback to bounding box (maintained incrementally in claim function)
+            const { minX, maxX, minY, maxY } = state.bounds;
+            if (maxX >= minX) {
+                label.style.left = `${((minX + maxX + 1) / 2) * CONFIG.TILE_SIZE}px`;
+                label.style.top = `${((minY + maxY + 1) / 2) * CONFIG.TILE_SIZE}px`;
+                label.style.transform = `translate(-50%, -50%)`;
             }
-
-            // Find the largest cluster
-            let largestCluster = clusters.reduce((max, c) => c.length > max.length ? c : max, clusters[0]);
-            
-            // Calculate bounds for the largest cluster only
-            let minX = CONFIG.COLS, maxX = 0, minY = CONFIG.ROWS, maxY = 0;
-            for (let idx of largestCluster) {
-                const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
-                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-            }
-
-            // Sync global bounds for popups and label centering
-            state.bounds = { minX, maxX, minY, maxY };
-
-            label.style.left = `${((minX + maxX + 1) / 2) * CONFIG.TILE_SIZE}px`;
-            label.style.top = `${((minY + maxY + 1) / 2) * CONFIG.TILE_SIZE}px`;
-            label.style.transform = `translate(-50%, -50%)`;
         }
 
         const start = (e) => { 
