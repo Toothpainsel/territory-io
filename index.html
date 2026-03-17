@@ -814,7 +814,7 @@
                         <button onclick="saveToryScript()" class="bg-slate-800 px-4 py-1 rounded text-[10px] font-bold text-slate-400 uppercase">Save</button>
                         <span id="active-tory-filename" class="ml-auto text-[10px] text-slate-500 font-mono self-center">unsaved.tory</span>
                     </div>
-                    <textarea id="tory-editor" spellcheck="false" class="flex-1 bg-slate-950 text-slate-300 font-mono text-sm p-6 outline-none resize-none" placeholder="// ToryScript - Automate your map creation\n// Example: fill(0, 0, 10, 10, 'water')"></textarea>
+                    <textarea id="tory-editor" spellcheck="false" class="flex-1 bg-slate-950 text-slate-300 font-mono text-sm p-6 outline-none resize-none whitespace-pre overflow-x-auto" placeholder="// ToryScript - Automate your map creation\n// Example: fill(0, 0, 10, 10, 'water')"></textarea>
                     <div id="tory-console" class="h-32 bg-black border-t border-slate-800 p-4 font-mono text-[10px] text-emerald-500 overflow-y-auto">
                         > ToryScript Engine Ready.
                     </div>
@@ -1111,7 +1111,7 @@
         };
 
         const state = {
-            version: '2.4.0', // Current version tag (Sandbox Mode & ToryScript)
+            version: '2.4.1', // Current version tag (Sandbox Fixes)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1216,6 +1216,13 @@
             engineModal.classList.remove('hidden');
             
             if (!state.engine.initialized) {
+                // Load files from localStorage if available
+                const savedFiles = localStorage.getItem('tory_engine_files');
+                if (savedFiles) {
+                    try {
+                        state.engine.files = JSON.parse(savedFiles);
+                    } catch (e) { console.error("Failed to load engine files", e); }
+                }
                 initSandboxEngine();
             }
             
@@ -1392,10 +1399,15 @@
             }
         }
 
+        function saveEngineFilesToStorage() {
+            localStorage.setItem('tory_engine_files', JSON.stringify(state.engine.files));
+        }
+
         function createNewToryFile() {
             const name = prompt("Enter filename (e.g. custom.tory):", "new_script.tory");
             if (!name) return;
             state.engine.files.push({ name: name.endsWith('.tory') ? name : name + '.tory', content: '', type: 'script' });
+            saveEngineFilesToStorage();
             updateToryFileList();
             updateEngineExplorer();
         }
@@ -1428,6 +1440,7 @@
             }
             const file = state.engine.files.find(f => f.name === state.engine.activeFile);
             file.content = document.getElementById('tory-editor').value;
+            saveEngineFilesToStorage();
             notify(`Saved ${file.name}`, 'success');
             updateEngineExplorer();
         }
@@ -1485,6 +1498,7 @@
         function deleteVirtualFile(name) {
             state.engine.files = state.engine.files.filter(f => f.name !== name);
             if (state.engine.activeFile === name) state.engine.activeFile = null;
+            saveEngineFilesToStorage();
             updateEngineExplorer();
             updateToryFileList();
         }
@@ -1513,30 +1527,37 @@
         function applyMapDataToGame(data) {
             if (state.initialized) {
                 if (!confirm("Start new game with this map? Current progress will be lost.")) return;
-                location.reload(); // Simple way to reset for now
+                localStorage.setItem('custom_map_to_play', JSON.stringify(data));
+                location.reload(); 
+                return;
             }
             
             state.customMapData = data;
-            startGame('single'); // Start as single player but with custom data
+            startGame('single'); 
             
             // Overwrite generated world with custom data
-            state.tileTypes.set(data.tileTypes);
+            state.tileTypes.set(new Uint8Array(data.tileTypes));
             state.cityIndices = new Set(data.cityIndices);
             data.cityIndices.forEach(idx => {
                 state.tileTypes[idx] = 5;
                 state.cityPopulations[idx] = 1000;
             });
             
-            if (data.capitalIdx !== null) {
-                const tx = data.capitalIdx % CONFIG.COLS, ty = Math.floor(data.capitalIdx / CONFIG.COLS);
-                // We'll let spawnEntities handle the actual entity placement for now
-                // but we could force the player to the custom capital location.
-            }
-            
             drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
             closeSandboxEngine();
             notify(`Loaded map: ${data.name}`, 'success');
-        };
+        }
+
+        // Check for custom map on load
+        window.addEventListener('load', () => {
+            const savedMap = localStorage.getItem('custom_map_to_play');
+            if (savedMap) {
+                localStorage.removeItem('custom_map_to_play');
+                try {
+                    applyMapDataToGame(JSON.parse(savedMap));
+                } catch (e) { console.error("Failed to load saved map", e); }
+            }
+        });
 
         const viewport = document.getElementById('viewport');
         const container = document.getElementById('game-container');
@@ -1797,6 +1818,14 @@
         }
 
         function spawnEntities(playerSx = -1, playerSy = -1) {
+            // If we have custom map data, use its capital location if provided
+            if (state.customMapData && state.customMapData.capitalIdx !== null && playerSx === -1) {
+                const tx = state.customMapData.capitalIdx % CONFIG.COLS;
+                const ty = Math.floor(state.customMapData.capitalIdx / CONFIG.COLS);
+                playerSx = tx - 3;
+                playerSy = ty - 3;
+            }
+
             // Spawn Player
             if (playerSx !== -1) {
                 spawnCommander(1, playerSx, playerSy);
@@ -2496,8 +2525,6 @@
                             if (tx < 0 || tx >= CONFIG.COLS || ty < 0 || ty >= CONFIG.ROWS) continue;
                             const tIdx = ty * CONFIG.COLS + tx;
                             if (state.tileOwners[tIdx] === 0) {
-                                const tNeighbors = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, idx+CONFIG.COLS]; // Use original idx context for safety
-                                // Actually, neighbors of tIdx
                                 const nbs = [tIdx-1, tIdx+1, tIdx-CONFIG.COLS, tIdx+CONFIG.COLS];
                                 const tHasOwnedNeighbor = nbs.some(n => n >= 0 && n < state.tileTypes.length && state.tileOwners[n] === 1);
                                 if (tHasOwnedNeighbor) {
