@@ -1189,7 +1189,7 @@ log("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.4.3', // Current version tag (ToryScript Docs & API)
+            version: '2.4.4', // Current version tag (Script Viewer Fixes)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1428,6 +1428,15 @@ log("World Generated!");</pre>
 
         // ToryScript Engine
         function runToryScript() {
+            // Auto-save before running
+            if (state.engine.activeFile) {
+                const file = state.engine.files.find(f => f.name === state.engine.activeFile);
+                if (file) {
+                    file.content = document.getElementById('tory-editor').value;
+                    saveEngineFilesToStorage();
+                }
+            }
+
             const code = document.getElementById('tory-editor').value;
             const consoleEl = document.getElementById('tory-console');
             consoleEl.innerHTML += `<br>> Running script...`;
@@ -1510,6 +1519,7 @@ log("World Generated!");</pre>
 
         function updateToryFileList() {
             const list = document.getElementById('tory-file-list');
+            if (!list) return;
             list.innerHTML = '';
             state.engine.files.filter(f => f.name.endsWith('.tory')).forEach(f => {
                 const div = document.createElement('div');
@@ -1523,6 +1533,13 @@ log("World Generated!");</pre>
         function loadToryFile(name) {
             const file = state.engine.files.find(f => f.name === name);
             if (!file) return;
+            
+            // Sync current editor content back to file before switching
+            if (state.engine.activeFile) {
+                const currentFile = state.engine.files.find(f => f.name === state.engine.activeFile);
+                if (currentFile) currentFile.content = document.getElementById('tory-editor').value;
+            }
+
             state.engine.activeFile = name;
             document.getElementById('tory-editor').value = file.content;
             document.getElementById('active-tory-filename').innerText = name;
@@ -1535,10 +1552,12 @@ log("World Generated!");</pre>
                 if (!state.engine.activeFile) return;
             }
             const file = state.engine.files.find(f => f.name === state.engine.activeFile);
-            file.content = document.getElementById('tory-editor').value;
-            saveEngineFilesToStorage();
-            notify(`Saved ${file.name}`, 'success');
-            updateEngineExplorer();
+            if (file) {
+                file.content = document.getElementById('tory-editor').value;
+                saveEngineFilesToStorage();
+                notify(`Saved ${file.name}`, 'success');
+                updateEngineExplorer();
+            }
         }
 
         function saveEngineMap() {
