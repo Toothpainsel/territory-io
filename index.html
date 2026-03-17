@@ -1111,7 +1111,7 @@
         };
 
         const state = {
-            version: '2.4.1', // Current version tag (Sandbox Fixes)
+            version: '2.4.2', // Current version tag (Sandbox Fixes & Diagnostics)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1204,11 +1204,8 @@
                     { name: 'example.tory', content: '// Example ToryScript\nfill(10, 10, 50, 50, "water");\nspawnCity(20, 20);\nspawnCapital(100, 100);', type: 'script' }
                 ],
                 activeFile: null
-            else if (mode === 'sandbox') {
-                document.getElementById('tab-sandbox').className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
-                document.getElementById('sandbox-panel').classList.remove('hidden');
             }
-        }
+        };
 
         // --- Sandbox Engine Logic ---
         function openSandboxEngine() {
@@ -1261,9 +1258,11 @@
                 }
             };
 
+            const handleEngineUp = () => { state.engine.isInteracting = false; };
+
             eCanvas.addEventListener('mousedown', (e) => { state.engine.isInteracting = true; handleEngineMove(e); });
-            window.addEventListener('mousemove', handleEngineMove);
-            window.addEventListener('mouseup', () => state.engine.isInteracting = false);
+            eCanvas.addEventListener('mousemove', handleEngineMove);
+            window.addEventListener('mouseup', handleEngineUp);
             
             state.engine.initialized = true;
         }
@@ -1535,7 +1534,8 @@
             state.customMapData = data;
             startGame('single'); 
             
-            // Overwrite generated world with custom data
+            // The generateWorld call in startGame already drew the world.
+            // We overwrite and redraw only if necessary, or just rely on drawRegion.
             state.tileTypes.set(new Uint8Array(data.tileTypes));
             state.cityIndices = new Set(data.cityIndices);
             data.cityIndices.forEach(idx => {
@@ -1543,6 +1543,7 @@
                 state.cityPopulations[idx] = 1000;
             });
             
+            // Full redraw once
             drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
             closeSandboxEngine();
             notify(`Loaded map: ${data.name}`, 'success');
@@ -1584,15 +1585,19 @@
             const singleTab = document.getElementById('tab-single');
             const multiTab = document.getElementById('tab-multi');
             const customTab = document.getElementById('tab-custom');
+            const sandboxTab = document.getElementById('tab-sandbox');
             const singlePanel = document.getElementById('single-panel');
             const multiPanel = document.getElementById('multi-panel');
             const customPanel = document.getElementById('custom-panel');
+            const sandboxPanel = document.getElementById('sandbox-panel');
             
             // Reset all tabs
-            [singleTab, multiTab, customTab].forEach(tab => {
-                tab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400';
+            [singleTab, multiTab, customTab, sandboxTab].forEach(tab => {
+                if (tab) tab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-slate-800 text-slate-400';
             });
-            [singlePanel, multiPanel, customPanel].forEach(panel => panel.classList.add('hidden'));
+            [singlePanel, multiPanel, customPanel, sandboxPanel].forEach(panel => {
+                if (panel) panel.classList.add('hidden');
+            });
 
             if (mode === 'single') {
                 singleTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg';
@@ -1603,6 +1608,9 @@
             } else if (mode === 'custom') {
                 customTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
                 customPanel.classList.remove('hidden');
+            } else if (mode === 'sandbox') {
+                sandboxTab.className = 'flex-1 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all bg-amber-600 text-white shadow-lg';
+                sandboxPanel.classList.remove('hidden');
             }
         }
 
