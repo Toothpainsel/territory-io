@@ -852,6 +852,7 @@
                 <div class="flex-1 flex flex-col">
                     <div class="p-2 bg-slate-900 border-b border-slate-800 flex gap-2">
                         <button type="button" onclick="runToryScript()" class="bg-blue-600 px-4 py-1 rounded text-[10px] font-bold text-white uppercase hover:bg-blue-500 transition-all" title="Compile and run ToryScript">Run Script</button>
+                        <button type="button" onclick="stopActiveScript()" class="bg-red-600 px-4 py-1 rounded text-[10px] font-bold text-white uppercase hover:bg-red-500 transition-all" title="Stop current script and clear hooks">Stop</button>
                         <button type="button" onclick="saveActiveFile()" class="bg-slate-800 px-4 py-1 rounded text-[10px] font-bold text-slate-400 uppercase hover:bg-slate-700 transition-all" title="Save current file to VFS">Save</button>
                         <div class="h-4 w-[1px] bg-slate-800 mx-2 self-center"></div>
                         <span id="active-file-path" class="text-[10px] text-slate-500 font-mono self-center truncate max-w-xs">/root/scripts/main.tory</span>
@@ -1462,7 +1463,8 @@ cycle(tory() {
             planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null, assaultType: 'support' },
             events: [], // Historical event log: { time: Date.now(), msg: '...', type: 'war'|'alliance'|'collapse' }
             botAllyCooldowns: {}, // { entityIdx: timestamp }
-            hooks: { onTick: [], onCycle: [], onWar: [] }, // ToryScript Hooks
+            hooks: { onTick: new Map(), onCycle: new Map(), onWar: new Map() }, // ToryScript Hooks (Map of scriptId -> callback)
+            activeScripts: new Set(), // Set of currently running script IDs
             assaultInProgress: false,
             activeWarId: null,
             
@@ -2145,6 +2147,7 @@ cycle(tory() {
                 // 3. remaining tory -> let (for variable declarations)
                 { pattern: /\btory\b/g, replacement: 'let' },
 
+                { pattern: /\bwait\s*\(/g, replacement: 'await wait(' },
                 { pattern: /\bpaint\s*\(/g, replacement: 'fill(' },
                 { pattern: /\brect\s*\(/g, replacement: 'fill(' },
                 { pattern: /\bisland\s*\(/g, replacement: 'circle(' },
@@ -2190,8 +2193,9 @@ cycle(tory() {
         }
 
         const ToryScript = {
-            api: (customLog) => ({
+            api: (scriptId, customLog) => ({
                 // Graphics/Map API
+                wait: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
                 fill: (x, y, w, h, type) => {
                     const t = type === 'water' ? 0 : 1;
                     for (let i = y; i < y + h; i++) {
@@ -2297,8 +2301,8 @@ cycle(tory() {
                         }
                     }
                 },
-                onTick: (callback) => { if (typeof callback === 'function') state.hooks.onTick.push(callback); },
-                onCycle: (callback) => { if (typeof callback === 'function') state.hooks.onCycle.push(callback); },
+                onTick: (callback) => { if (typeof callback === 'function') state.hooks.onTick.set(scriptId, callback); },
+                onCycle: (callback) => { if (typeof callback === 'function') state.hooks.onCycle.set(scriptId, callback); },
                 claimAll: (coordsArray, ownerIdx = 1) => {
                     if (!Array.isArray(coordsArray)) return;
                     coordsArray.forEach(coord => {
@@ -2446,21 +2450,46 @@ cycle(tory() {
                     if (customLog) customLog(msg);
                     else console.log(`[ToryScript] ${msg}`); 
                 },
+                stop: () => ToryScript.stop(scriptId),
                 MAP_WIDTH: CONFIG.COLS,
                 MAP_HEIGHT: CONFIG.ROWS,
                 VERSION: state.version
             }),
-            run: (code, options = {}) => {
+            stop: (scriptId) => {
+                state.hooks.onTick.delete(scriptId);
+                state.hooks.onCycle.delete(scriptId);
+                state.activeScripts.delete(scriptId);
+                console.log(`[ToryScript] Stopped script: ${scriptId}`);
+            },
+            run: async (code, options = {}) => {
+                const scriptId = options.id || `script-${Date.now()}`;
+                
+                // Clear previous session if same ID
+                if (state.activeScripts.has(scriptId)) {
+                    ToryScript.stop(scriptId);
+                }
+                
                 const compiled = compileToryScript(code);
-                const api = ToryScript.api(options.onLog);
+                const api = ToryScript.api(scriptId, options.onLog);
+                
+                state.activeScripts.add(scriptId);
+                
                 try {
-                    const scriptFunc = new Function(...Object.keys(api), compiled);
-                    scriptFunc(...Object.values(api));
+                    // Wrap in async function
+                    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+                    const scriptFunc = new AsyncFunction(...Object.keys(api), compiled);
+                    
+                    if (options.onLog) options.onLog(`Executing ${scriptId}...`);
+                    
+                    await scriptFunc(...Object.values(api));
+                    
                     if (state.engine.initialized) drawEngineMap();
                     else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
-                    return { success: true };
+                    
+                    return { success: true, id: scriptId };
                 } catch (e) {
                     if (options.onLog) options.onLog(`Runtime Error: ${e.message}`);
+                    state.activeScripts.delete(scriptId);
                     return { success: false, error: e.message };
                 }
             }
@@ -2473,13 +2502,17 @@ cycle(tory() {
             }
         });
 
-        function runToryScript() {
+        async function runToryScript() {
             saveActiveFile(false);
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (!file) return;
+
             const originalCode = document.getElementById('tory-editor').value;
             const consoleEl = document.getElementById('tory-console');
-            consoleEl.innerHTML += `<br>> Executing ToryScript...`;
+            consoleEl.innerHTML += `<br>> Executing ${file.name}...`;
             
-            const result = ToryScript.run(originalCode, {
+            const result = await ToryScript.run(originalCode, {
+                id: file.id,
                 onLog: (msg) => {
                     consoleEl.innerHTML += `<br>> ${msg}`;
                     consoleEl.scrollTop = consoleEl.scrollHeight;
@@ -2487,10 +2520,20 @@ cycle(tory() {
             });
 
             if (result.success) {
-                consoleEl.innerHTML += `<br>> ToryScript: Success.`;
+                consoleEl.innerHTML += `<br>> ToryScript: Success (ID: ${result.id}).`;
             } else {
                 consoleEl.innerHTML += `<br><span class="text-red-500">> Error: ${result.error}</span>`;
             }
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function stopActiveScript() {
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (!file) return;
+            
+            ToryScript.stop(file.id);
+            const consoleEl = document.getElementById('tory-console');
+            consoleEl.innerHTML += `<br><span class="text-amber-500">> Script stopped: ${file.name}</span>`;
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
@@ -5135,8 +5178,11 @@ cycle(tory() {
                 state.lastTick = now;
                 
                 // Execute ToryScript onTick hooks
-                state.hooks.onTick.forEach(hook => {
-                    try { hook(); } catch(e) { console.error("ToryScript onTick hook error:", e); }
+                state.hooks.onTick.forEach((hook, scriptId) => {
+                    try { hook(); } catch(e) { 
+                        console.error(`ToryScript onTick hook error [${scriptId}]:`, e);
+                        state.hooks.onTick.delete(scriptId); // Remove failing hooks
+                    }
                 });
 
                 // Intermission Timer Countdown
@@ -5327,8 +5373,11 @@ cycle(tory() {
                     state.needsDamCheck = true;
                     
                     // Execute ToryScript onCycle hooks
-                    state.hooks.onCycle.forEach(hook => {
-                        try { hook(); } catch(e) { console.error("ToryScript onCycle hook error:", e); }
+                    state.hooks.onCycle.forEach((hook, scriptId) => {
+                        try { hook(); } catch(e) { 
+                            console.error(`ToryScript onCycle hook error [${scriptId}]:`, e);
+                            state.hooks.onCycle.delete(scriptId); // Remove failing hooks
+                        }
                     });
 
                     const bonus = totalIncome + (state.ownedCount * 2);
