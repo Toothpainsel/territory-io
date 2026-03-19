@@ -1858,7 +1858,9 @@ cycle(tory() {
             // Sync current editor content back to file before switching
             if (state.engine.vfs.activeFileId) {
                 const currentFile = vfsGetNodeById(state.engine.vfs.activeFileId);
-                if (currentFile) currentFile.content = document.getElementById('tory-editor').value;
+                if (currentFile && !currentFile.name.endsWith('.toryconfig')) {
+                    currentFile.content = document.getElementById('tory-editor').value;
+                }
             }
             
             state.engine.vfs.activeFileId = id;
