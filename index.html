@@ -379,6 +379,24 @@
         <div class="profiler-row"><span>Status:</span> <span class="profiler-val" id="prof-status">IDLE</span></div>
     </div>
 
+    <!-- Workspace File Viewer Modal -->
+    <div id="workspace-file-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[3000] flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 id="workspace-file-title" class="text-xl font-black text-white uppercase tracking-tighter italic">File Viewer</h3>
+                    <p id="workspace-file-path" class="text-[10px] text-slate-500 font-mono"></p>
+                </div>
+                <button onclick="document.getElementById('workspace-file-modal').classList.add('hidden')" class="text-slate-500 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="bg-black/50 rounded-2xl p-6 border border-white/5 max-h-[60vh] overflow-y-auto">
+                <pre id="workspace-file-content" class="text-blue-400 font-mono text-xs whitespace-pre-wrap"></pre>
+            </div>
+        </div>
+    </div>
+
     <div id="update-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6">
         <div class="bg-slate-900 p-8 rounded-3xl border border-blue-500/50 w-full max-w-xs shadow-2xl text-center">
             <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1619,6 +1637,110 @@ cycle(tory() {
             AIR_SUPPORT_RANGE: 200
         };
 
+        // --- New VFS & Workspace Structure ---
+        function initVFS() {
+            const savedVfs = localStorage.getItem('tory_engine_vfs');
+            if (savedVfs) {
+                try {
+                    const parsed = JSON.parse(savedVfs);
+                    if (parsed?.root && parsed?.activeFileId) return parsed;
+                } catch (e) { console.error("Failed to load engine VFS", e); }
+            }
+            return {
+                root: {
+                    id: 'root',
+                    name: 'root',
+                    type: 'folder',
+                    children: [
+                        { id: 'f1', name: 'scripts', type: 'folder', children: [
+                            { id: 's1', name: 'main.tory', type: 'script', content: '// ToryScript v2.9\nprint("Engine Booted...");\n\n// Run on game start\ntory onStart() {\n    reset();\n    seed(0.1, 0.45);\n    home(192, 108);\n}\n\nonStart();' },
+                            { id: 's2', name: 'archipelago.tory', type: 'script', content: '// ToryScript Archipelago Generator\nreset();\nseed(0.2, 0.5);\n\n// Add some manual islands\nisland(100, 100, 20, "land");\nisland(284, 150, 15, "land");\n\n// Add cities\ncity(100, 100);\ncity(284, 150);\n\nhome(100, 100);\nprint("Archipelago Generated!");' },
+                            { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: `// Advanced Live Workspace Explorer v3.0
+// Must be executed via console: ToryScript.exec('toggleExplorer()')
+
+tory toggleExplorer() {
+    tory id = "tory-live-sidebar";
+    tory existing = document.getElementById(id);
+    if (existing) {
+        existing.style.transform = "translateX(100%)";
+        setTimeout(tory() { existing.remove(); }, 300);
+        return;
+    }
+
+    tory sidebar = document.createElement("div");
+    sidebar.id = id;
+    sidebar.style.cssText = "position:fixed;right:0;top:0;width:350px;height:100vh;background:rgba(2,6,23,0.95);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:30px;color:white;font-family:'Inter',sans-serif;overflow-y:auto;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:-20px 0 50px rgba(0,0,0,0.5)";
+    
+    tory html = "<h2 style='margin-bottom:25px;font-size:18px;font-weight:900;color:#3b82f6;letter-spacing:-0.05em;text-transform:uppercase;font-style:italic'>Live Workspace</h2>";
+    html += "<div style='font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:15px'>Project Directories</div>";
+    html += "<div id='live-vfs-root' style='display:flex;flex-direction:column;gap:4px'></div>";
+    
+    sidebar.innerHTML = html;
+    document.body.appendChild(sidebar);
+    
+    tory renderNode = tory(node, depth) {
+        tory container = document.createElement("div");
+        container.style.paddingLeft = (depth * 15) + "px";
+        
+        tory item = document.createElement("div");
+        item.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:all 0.2s;font-size:12px;color:#cbd5e1";
+        item.onmouseover = tory() { item.style.background = "rgba(255,255,255,0.05)"; item.style.color = "white"; };
+        item.onmouseout = tory() { item.style.background = "transparent"; item.style.color = "#cbd5e1"; };
+        
+        tory icon = node.type === 'folder' ? "📁" : "📄";
+        item.innerHTML = "<span>" + icon + "</span><span style='flex:1'>" + node.name + "</span>";
+        
+        if (node.type === 'script' || node.type === 'config') {
+            item.onclick = tory(e) {
+                e.preventDefault();
+                tory modal = document.getElementById('workspace-file-modal');
+                document.getElementById('workspace-file-title').innerText = node.name;
+                document.getElementById('workspace-file-path').innerText = "VFS://" + node.id;
+                document.getElementById('workspace-file-content').innerText = node.content;
+                modal.classList.remove('hidden');
+            };
+        }
+        
+        container.appendChild(item);
+        
+        if (node.children) {
+            node.children.forEach(tory(child) {
+                container.appendChild(renderNode(child, depth + 1));
+            });
+        }
+        
+        return container;
+    };
+    
+    tory vfsRoot = document.getElementById('live-vfs-root');
+    vfsRoot.appendChild(renderNode(engine.vfs.root, 0));
+    
+    setTimeout(tory() { sidebar.style.transform = "translateX(0)"; }, 10);
+    print("Live Workspace Engaged.");
+}
+
+toggleExplorer();` },
+                            { id: 's4', name: 'live_mod.tory', type: 'script', content: '// Live Mod Example\n// Increases player balance every cycle and logs every tick\n\ntick(tory() {\n    // This runs every second\n    // print("Tick..."); \n});\n\ncycle(tory() {\n    // This runs every 10 seconds\n    tory current = player("balance");\n    player("balance", current + 1000);\n    print("Cycle Bonus: +$1000");\n});\n\nprint("Live Mod Active!");' },
+                            { id: 'f1_bots', name: 'bots', type: 'folder', children: [
+                                { id: 's_aggro', name: 'aggressive.tory', type: 'script', content: '// Aggressive Bot Logic\ntory onBotTick(botIdx) {\n    tory b = bot(botIdx);\n    if (b.balance > 500) {\n        // Expansion logic\n    }\n}' }
+                            ]},
+                            { id: 'f1_res', name: 'research', type: 'folder', children: [
+                                { id: 's_econ', name: 'economic_focus.tory', type: 'script', content: '// Economic Focus Script\nupgrade("economic", "tileCost", 5);\nprint("Economics upgraded!");' }
+                            ]}
+                        ]},
+                        { id: 'f_configs', name: 'configs', type: 'folder', children: [
+                            { id: 'c_bots', name: 'bots.toryconfig', type: 'config', content: '{\n  "difficulty": "hard",\n  "spawnRate": 1.2,\n  "aggression": 0.8\n}' },
+                            { id: 'c_res', name: 'research.toryconfig', type: 'config', content: '{\n  "baseCost": 100,\n  "multiplier": 1.5\n}' },
+                            { id: 'c_behave', name: 'behavior.toryconfig', type: 'config', content: '{\n  "betrayalChance": 0.02,\n  "allianceThreshold": 0.6\n}' }
+                        ]},
+                        { id: 'f2', name: 'maps', type: 'folder', children: [] }
+                    ]
+                },
+                activeFileId: 's1',
+                currentPath: '/root/scripts'
+            };
+        }
+
         const state = {
             version: '3.2.0', // Current version tag (Multimedia & Map Editor)
             username: '',
@@ -1705,7 +1827,7 @@ cycle(tory() {
             engine: {
                 initialized: false,
                 activeTab: 'editor',
-                brush: 'water',
+                brush: 'land',
                 brushSize: 1,
                 mapData: {
                     tileTypes: null,
@@ -1713,7 +1835,7 @@ cycle(tory() {
                     capitalIdx: null
                 },
                 // --- New VFS Structure ---
-                vfs: {
+                
                     root: {
                         id: 'root',
                         name: 'root',
@@ -1739,9 +1861,7 @@ cycle(tory() {
                             { id: 'f2', name: 'maps', type: 'folder', children: [] }
                         ]
                     },
-                    activeFileId: 's1',
-                    currentPath: '/root/scripts'
-                },
+                vfs: initVFS(),
                 isInteracting: false
             }
         };
@@ -1752,13 +1872,6 @@ cycle(tory() {
             engineModal.classList.remove('hidden');
             
             if (!state.engine.initialized) {
-                const savedVfs = localStorage.getItem('tory_engine_vfs');
-                if (savedVfs) {
-                    try {
-                        const parsed = JSON.parse(savedVfs);
-                        if (parsed?.root && parsed?.activeFileId) state.engine.vfs = parsed;
-                    } catch (e) { console.error("Failed to load engine VFS", e); }
-                }
                 initSandboxEngine();
             }
             
@@ -2678,7 +2791,8 @@ cycle(tory() {
                 stop: () => ToryScript.stop(scriptId),
                 MAP_WIDTH: CONFIG.COLS,
                 MAP_HEIGHT: CONFIG.ROWS,
-                VERSION: state.version
+                VERSION: state.version,
+                engine: state.engine
             }),
             stop: (scriptId) => {
                 state.hooks.onTick.delete(scriptId);
@@ -2706,17 +2820,43 @@ cycle(tory() {
                     
                     if (options.onLog) options.onLog(`Executing ${scriptId}...`);
                     
-                    await scriptFunc(...Object.values(api));
+                    const result = await scriptFunc(...Object.values(api));
                     
                     if (state.engine.initialized) drawEngineMap();
                     else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
                     
-                    return { success: true, id: scriptId };
+                    return { success: true, id: scriptId, result };
                 } catch (e) {
                     if (options.onLog) options.onLog(`Runtime Error: ${e.message}`);
                     state.activeScripts.delete(scriptId);
                     return { success: false, error: e.message };
                 }
+            },
+            // Chrome Console Helper
+            exec: (code) => {
+                console.log("%c[ToryScript Console]", "color: #3b82f6; font-weight: bold", "Executing script...");
+                ToryScript.run(code, {
+                    onLog: (msg) => console.log(`%c[ToryScript] ${msg}`, "color: #94a3b8")
+                }).then(res => {
+                    if (res.success) console.log("%c[ToryScript] Execution Successful", "color: #10b981; font-weight: bold");
+                    else console.error(`[ToryScript] Execution Failed: ${res.error}`);
+                });
+            },
+            help: () => {
+                console.log("%c[ToryScript API Help]", "color: #3b82f6; font-weight: bold; font-size: 14px");
+                console.log("Use ToryScript.exec('code') to run scripts from the console.");
+                console.log("Available Commands (ToryScript Syntax):");
+                console.log("- tory name() { ... } : Define function");
+                console.log("- tory x = 10; : Define variable");
+                console.log("- print(msg) : Log to console");
+                console.log("- fill(x, y, w, h, type) : Fill area (water/land)");
+                console.log("- claim([{x, y}, ...], ownerIdx) : Batch claim tiles");
+                console.log("- player('balance', 5000) : Set player balance");
+                console.log("- bot(idx) : Get bot data");
+                console.log("- tick(tory() { ... }) : Add onTick hook");
+                console.log("- cycle(tory() { ... }) : Add onCycle hook");
+                console.log("- toggleExplorer() : Open Live Workspace Explorer");
+                console.log("Example: ToryScript.exec('toggleExplorer()')");
             }
         };
         window.ToryScript = ToryScript; // Expose to global scope
