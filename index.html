@@ -1192,6 +1192,14 @@ tory setupMap() {      // Function definition
                                     <code class="text-cyan-400 block mb-1">update()</code>
                                     <span class="text-[10px] text-slate-500 uppercase">Live UI Refresh</span>
                                 </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">overwrite(name, fn)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Override Globals</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">when(pred, fn)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Conditional Run</span>
+                                </div>
                             </div>
 
                             <div class="bg-blue-500/5 p-4 rounded-2xl border border-blue-500/20">
@@ -1210,23 +1218,35 @@ tory setupMap() {      // Function definition
                     <section class="space-y-6">
                         <h3 class="text-xl font-bold text-slate-200 uppercase tracking-widest flex items-center gap-3">
                             <span class="w-8 h-8 bg-slate-200/20 rounded-lg flex items-center justify-center text-sm">06</span>
-                            Integration & External Control
+                            Integration & Console Guide
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                                <h4 class="text-white font-bold text-sm mb-3 italic">Chrome Developer Console</h4>
-                                <p class="text-slate-400 text-[10px] mb-3 leading-relaxed">Directly interface with the engine. Every game mode supports hidden scripting capabilities.</p>
-                                <div class="space-y-2">
-                                    <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-blue-400 font-mono">ToryScript.help(); // View API documentation</pre>
-                                    <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-emerald-400 font-mono">ToryScript.exec("print('Connected')");</pre>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 space-y-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-4">
+                                    <h4 class="text-white font-bold text-sm italic">Chrome Developer Console</h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed">Directly interface with the engine. Every game mode supports hidden scripting capabilities via the <code class="text-blue-400">ToryScript</code> object.</p>
+                                    <div class="space-y-2">
+                                        <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-blue-400 font-mono">ToryScript.help(); // View Full API</pre>
+                                        <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-emerald-400 font-mono">ToryScript.exec("player('balance', 10000);");</pre>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <h4 class="text-white font-bold text-sm italic">Live Overwrite & Injection</h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed">Overwrite core game functions or inject global styles and scripts for deep engine modification.</p>
+                                    <div class="space-y-2">
+                                        <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-purple-400 font-mono">overwrite('gameLoop', tory() { ... });</pre>
+                                        <pre class="bg-black/50 p-3 rounded-xl text-[10px] text-cyan-400 font-mono">injectCSS(".tile.owned { border: 1px solid white; }");</pre>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                                <h4 class="text-white font-bold text-sm mb-3 italic">External Apps (postMessage)</h4>
-                                <pre class="bg-black/50 p-4 rounded-xl text-[10px] text-emerald-400 font-mono">window.postMessage({
-  type: 'TORYSCRIPT_EXEC',
-  code: 'seed(0.2, 0.5);'
-}, '*');</pre>
+                            <div class="bg-amber-500/5 p-6 rounded-2xl border border-amber-500/20">
+                                <div class="flex gap-3">
+                                    <span class="text-amber-400 text-sm">⚠️</span>
+                                    <div>
+                                        <div class="text-amber-400 font-black text-[10px] uppercase mb-1">Architect Warning</div>
+                                        <p class="text-slate-500 text-[10px] leading-relaxed">Overwriting core functions like <code class="text-slate-400">gameLoop</code> or <code class="text-slate-400">drawTile</code> can cause game instability. Always backup your workspace before deep injection.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -2878,6 +2898,8 @@ toggleExplorer();` },
                 { pattern: /\binjectCSS\s*\(/g, replacement: 'injectCSS(' },
                 { pattern: /\binjectJS\s*\(/g, replacement: 'injectJS(' },
                 { pattern: /\bupdate\s*\(\)/g, replacement: 'update()' },
+                { pattern: /\boverwrite\s*\(/g, replacement: 'overwrite(' },
+                { pattern: /\bwhen\s*\(/g, replacement: 'when(' },
                 { pattern: /\bimage\s*\(/g, replacement: 'createImage(' },
                 { pattern: /\bgif\s*\(/g, replacement: 'createGif(' },
                 { pattern: /\baudio\s*\(/g, replacement: 'createAudio(' },
@@ -3158,6 +3180,27 @@ toggleExplorer();` },
                     if (state.engine.initialized) drawEngineMap();
                     else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
                 },
+                overwrite: (name, fn) => {
+                    if (typeof window[name] === 'function') {
+                        window[`_orig_${name}`] = window[name];
+                        window[name] = fn;
+                        console.log(`[ToryScript] Overwrote function: ${name}`);
+                        return true;
+                    }
+                    return false;
+                },
+                when: (predicate, callback, interval = 100) => {
+                    const timerId = setInterval(() => {
+                        try {
+                            if (predicate()) {
+                                clearInterval(timerId);
+                                callback();
+                            }
+                        } catch (e) { clearInterval(timerId); }
+                    }, interval);
+                    // Tracking for cleanup
+                    if (!state.activeScripts.has(scriptId)) state.activeScripts.add(scriptId);
+                },
                 // --- High-Level UI Factory ---
                 createButton: (label, callback, options = {}) => {
                     const btn = document.createElement('button');
@@ -3401,6 +3444,8 @@ toggleExplorer();` },
                 console.log("- injectCSS(css) : Add global document styles");
                 console.log("- injectJS(code) : Run raw JavaScript in body");
                 console.log("- update() : Force refresh all UI components");
+                console.log("- overwrite(name, fn) : Overwrite global game functions");
+                console.log("- when(pred, fn) : Run fn when pred() is true");
                 console.log("- fill(x, y, w, h, type) : Fill area (water/land)");
                 console.log("- claim([{x, y}, ...], ownerIdx) : Batch claim tiles");
                 console.log("- player('balance', 5000) : Set player balance");
