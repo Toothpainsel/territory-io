@@ -812,7 +812,7 @@
                 <button type="button" onclick="exportToryMap()" class="bg-purple-600 hover:bg-purple-500 px-4 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase border border-purple-400/40 transition-colors" title="Export entire workspace as .torymap">Export Workspace</button>
                 <button type="button" onclick="importToryMapTrigger()" class="bg-slate-700 hover:bg-slate-600 px-4 py-1.5 rounded-lg text-slate-200 text-[10px] font-bold uppercase border border-slate-600 transition-colors" title="Import .torymap workspace">Import Workspace</button>
                 <button type="button" id="engine-fullscreen-btn" onclick="toggleEngineFullscreen()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg text-slate-300 text-[10px] font-bold uppercase border border-slate-700 transition-colors" title="Toggle Fullscreen">Fullscreen</button>
-                <input type="file" id="torymap-import-input" accept=".torymap" class="hidden" onchange="handleToryMapImport(this)">
+                <input type="file" id="torymap-import-input" accept=".torymap" class="hidden" onchange="handleToryMapImport(this)" title="Import .torymap file">
                 <button type="button" onclick="closeSandboxEngine()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg text-slate-300 text-[10px] font-bold uppercase border border-slate-700 transition-colors" title="Exit Sandbox Engine">Exit</button>
             </div>
         </div>
@@ -1321,7 +1321,7 @@ cycle(tory() {
                             <span class="text-[10px] text-slate-500">PREVIEW</span>
                         </div>
                         <label class="w-full">
-                            <input type="file" id="pattern-upload" accept="image/*" class="hidden" onchange="handlePatternUpload(this)">
+                            <input type="file" id="pattern-upload" accept="image/*" class="hidden" onchange="handlePatternUpload(this)" title="Upload custom pattern image">
                             <div class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 rounded-xl text-center cursor-pointer transition-colors">
                                 <span class="text-[10px] font-bold text-slate-300 uppercase">Upload Pattern</span>
                             </div>
@@ -6062,7 +6062,7 @@ cycle(tory() {
             const listEl = document.getElementById('faction-members-list');
             listEl.innerHTML = allies.map(idx => `
                 <div class="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors">
-                    <input type="checkbox" id="fac-mem-${idx}" value="${idx}" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500">
+                    <input type="checkbox" id="fac-mem-${idx}" value="${idx}" title="Select member ${state.entities[idx].name}" class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500">
                     <label for="fac-mem-${idx}" class="flex-1 flex items-center gap-2 cursor-pointer">
                         <div class="w-2 h-2 rounded-full" style="background-color: ${state.entities[idx].color}"></div>
                         <span class="text-sm font-bold text-white">${state.entities[idx].name}</span>
