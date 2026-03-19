@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToyEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v2.9.0</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.0.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -859,6 +859,9 @@
                         <span id="active-file-id" class="ml-auto text-[8px] text-slate-700 font-mono self-center uppercase">ID: s1</span>
                     </div>
                     <textarea id="tory-editor" spellcheck="false" class="flex-1 bg-slate-950 text-slate-300 font-mono text-sm p-6 outline-none resize-none whitespace-pre overflow-x-auto" placeholder="// ToryScript - Automate your map creation\n// Example: fill(0, 0, 10, 10, 'water')"></textarea>
+                    <div id="config-editor" class="hidden flex-1 bg-slate-900 overflow-y-auto p-6 custom-scrollbar">
+                        <!-- Table will be injected here -->
+                    </div>
                     <div id="tory-console" class="h-32 bg-black border-t border-slate-800 p-4 font-mono text-[10px] text-emerald-500 overflow-y-auto">
                         > ToryScript Engine v2.6.0 Initialized.
                     </div>
@@ -941,6 +944,21 @@
                         </div>
 
                         <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">html(string)</code>
+                            <p class="text-slate-400 text-xs mt-2">Injects custom HTML into the game container. Returns the element ID.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">css(id, styles)</code>
+                            <p class="text-slate-400 text-xs mt-2">Applies inline CSS styles to a UI element by ID.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <code class="text-blue-400 font-bold text-sm">event(id, type, callback)</code>
+                            <p class="text-slate-400 text-xs mt-2">Attaches an event listener (e.g., 'click') to a UI element.</p>
+                        </div>
+
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
                             <code class="text-blue-400 font-bold text-sm">island(x, y, radius, type)</code>
                             <p class="text-slate-400 text-xs mt-2">Creates a circular shape of tiles.</p>
                         </div>
@@ -1020,6 +1038,22 @@ home(100, 100);
 
 print("World Generated!");</pre>
                     </div>
+
+                    <div class="pt-8 border-t border-slate-800">
+                        <h4 class="text-sm font-bold text-white uppercase mb-4">UI/UX Example: Custom Button</h4>
+                        <pre class="bg-black p-6 rounded-xl text-xs text-blue-400 font-mono overflow-x-auto">
+// Create a button
+tory btnId = html("&lt;button id='my-btn'&gt;Click Me!&lt;/button&gt;");
+
+// Style it
+css(btnId, "position:fixed; left:50%; top:20px; transform:translateX(-50%); background:#3b82f6; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; z-index:1000");
+
+// Add interaction
+event(btnId, 'click', tory() {
+    print("Custom UI Button Clicked!");
+    player('balance', 5000);
+});</pre>
+                    </div>
                 </div>
             </div>
 
@@ -1074,7 +1108,7 @@ print("World Generated!");</pre>
     <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
             <div class="flex items-center justify-end mb-4">
-                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v2.9.0</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v3.0.0</span>
             </div>
             <h1 class="text-3xl font-black text-center text-blue-400 mb-6 italic tracking-tight">TERRITORY.IO</h1>
             
@@ -1354,7 +1388,7 @@ print("World Generated!");</pre>
         };
 
         const state = {
-            version: '2.9.0', // Current version tag (Global API & postMessage)
+            version: '3.0.0', // Current version tag (Visual Configs & UI API)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1454,7 +1488,18 @@ print("World Generated!");</pre>
                             { id: 'f1', name: 'scripts', type: 'folder', children: [
                                 { id: 's1', name: 'main.tory', type: 'script', content: '// ToryScript v2.9\nprint("Engine Booted...");\n\n// Run on game start\ntory onStart() {\n    reset();\n    seed(0.1, 0.45);\n    home(192, 108);\n}\n\nonStart();' },
                                 { id: 's2', name: 'archipelago.tory', type: 'script', content: '// ToryScript Archipelago Generator\nreset();\nseed(0.2, 0.5);\n\n// Add some manual islands\nisland(100, 100, 20, "land");\nisland(284, 150, 15, "land");\n\n// Add cities\ncity(100, 100);\ncity(284, 150);\n\nhome(100, 100);\nprint("Archipelago Generated!");' },
-                                { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: '// Advanced Workspace Explorer\n// Injects a temporary sidebar to view VFS\n\ntory toggleExplorer() {\n    tory id = "tory-explorer-sidebar";\n    tory existing = document.getElementById(id);\n    if (existing) {\n        existing.remove();\n        print("Explorer Closed.");\n        return;\n    }\n\n    tory sidebar = document.createElement("div");\n    sidebar.id = id;\n    sidebar.style.cssText = "position:fixed;right:0;top:0;width:300px;height:100vh;background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:20px;color:white;font-family:sans-serif;overflow-y:auto;transition:all 0.3s ease";\n    \n    tory html = "<h2 style=\'margin-bottom:20px;font-size:18px;font-style:italic;font-weight:900\'>WORKSPACE EXPLORER</h2>";\n    \n    tory entities = getEntities();\n    html += "<div style=\'margin-bottom:20px;padding:15px;background:rgba(255,255,255,0.05);border-radius:12px\'>";\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:5px\'>MAP STATS</div>";\n    html += "<div>Entities: " + entities.length + "</div>";\n    html += "<div>Version: " + VERSION + "</div>";\n    html += "</div>";\n\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:10px\'>ACTIVE VFS LOG</div>";\n    html += "<div id=\'explorer-vfs-content\' style=\'font-size:12px;display:flex;flex-direction:column;gap:8px\'>";\n    html += "Searching VFS...</div>";\n\n    sidebar.innerHTML = html;\n    document.body.appendChild(sidebar);\n    print("Explorer Opened.");\n}\n\ntoggleExplorer();' }
+                                { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: '// Advanced Workspace Explorer\n// Injects a temporary sidebar to view VFS\n\ntory toggleExplorer() {\n    tory id = "tory-explorer-sidebar";\n    tory existing = document.getElementById(id);\n    if (existing) {\n        existing.remove();\n        print("Explorer Closed.");\n        return;\n    }\n\n    tory sidebar = document.createElement("div");\n    sidebar.id = id;\n    sidebar.style.cssText = "position:fixed;right:0;top:0;width:300px;height:100vh;background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:20px;color:white;font-family:sans-serif;overflow-y:auto;transition:all 0.3s ease";\n    \n    tory html = "<h2 style=\'margin-bottom:20px;font-size:18px;font-style:italic;font-weight:900\'>WORKSPACE EXPLORER</h2>";\n    \n    tory entities = getEntities();\n    html += "<div style=\'margin-bottom:20px;padding:15px;background:rgba(255,255,255,0.05);border-radius:12px\'>";\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:5px\'>MAP STATS</div>";\n    html += "<div>Entities: " + entities.length + "</div>";\n    html += "<div>Version: " + VERSION + "</div>";\n    html += "</div>";\n\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:10px\'>ACTIVE VFS LOG</div>";\n    html += "<div id=\'explorer-vfs-content\' style=\'font-size:12px;display:flex;flex-direction:column;gap:8px\'>";\n    html += "Searching VFS...</div>";\n\n    sidebar.innerHTML = html;\n    document.body.appendChild(sidebar);\n    print("Explorer Opened.");\n}\n\ntoggleExplorer();' },
+                                { id: 'f1_bots', name: 'bots', type: 'folder', children: [
+                                    { id: 's_aggro', name: 'aggressive.tory', type: 'script', content: '// Aggressive Bot Logic\ntory onBotTick(botIdx) {\n    tory b = bot(botIdx);\n    if (b.balance > 500) {\n        // Expansion logic\n    }\n}' }
+                                ]},
+                                { id: 'f1_res', name: 'research', type: 'folder', children: [
+                                    { id: 's_econ', name: 'economic_focus.tory', type: 'script', content: '// Economic Focus Script\nupgrade("economic", "tileCost", 5);\nprint("Economics upgraded!");' }
+                                ]}
+                            ]},
+                            { id: 'f_configs', name: 'configs', type: 'folder', children: [
+                                { id: 'c_bots', name: 'bots.toryconfig', type: 'config', content: '{\n  "difficulty": "hard",\n  "spawnRate": 1.2,\n  "aggression": 0.8\n}' },
+                                { id: 'c_res', name: 'research.toryconfig', type: 'config', content: '{\n  "baseCost": 100,\n  "multiplier": 1.5\n}' },
+                                { id: 'c_behave', name: 'behavior.toryconfig', type: 'config', content: '{\n  "betrayalChance": 0.02,\n  "allianceThreshold": 0.6\n}' }
                             ]},
                             { id: 'f2', name: 'maps', type: 'folder', children: [] }
                         ]
@@ -1791,25 +1836,124 @@ print("World Generated!");</pre>
             if (!file) return;
             
             const editor = document.getElementById('tory-editor');
+            const configEditor = document.getElementById('config-editor');
             const pathEl = document.getElementById('active-file-path');
             const idEl = document.getElementById('active-file-id');
             
-            editor.value = file.content || '';
             pathEl.innerText = vfsGetPath(file.id);
             idEl.innerText = `ID: ${file.id}`;
             
-            if (file.name.endsWith('.json')) {
-                setEngineTab('editor');
-            } else {
+            const isConfig = file.name.endsWith('.toryconfig');
+            const isMap = file.name.endsWith('.json');
+
+            if (isConfig) {
+                editor.classList.add('hidden');
+                configEditor.classList.remove('hidden');
+                renderConfigEditor(file.content);
                 setEngineTab('toryscript');
+            } else {
+                configEditor.classList.add('hidden');
+                editor.classList.remove('hidden');
+                editor.value = file.content || '';
+                if (isMap) {
+                    setEngineTab('editor');
+                } else {
+                    setEngineTab('toryscript');
+                }
             }
             updateEngineStatus();
+        }
+
+        function renderConfigEditor(content) {
+            const container = document.getElementById('config-editor');
+            container.innerHTML = '';
+            
+            let data = {};
+            try {
+                data = JSON.parse(content || '{}');
+            } catch (e) {
+                console.error("Failed to parse config", e);
+                data = { error: "Invalid JSON format" };
+            }
+
+            const table = document.createElement('table');
+            table.className = 'w-full text-left border-collapse';
+            table.innerHTML = `
+                <thead>
+                    <tr class="border-b border-slate-800">
+                        <th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Key</th>
+                        <th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Value</th>
+                    </tr>
+                </thead>
+                <tbody id="config-table-body"></tbody>
+            `;
+            
+            const tbody = table.querySelector('#config-table-body');
+            Object.entries(data).forEach(([key, val]) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-800/50 hover:bg-white/5 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 pr-4">
+                        <input type="text" value="${key}" class="bg-transparent text-blue-400 font-mono text-xs w-full outline-none" onchange="saveConfigEditor()">
+                    </td>
+                    <td class="py-3">
+                        <input type="text" value="${val}" class="bg-transparent text-slate-300 font-mono text-xs w-full outline-none" onchange="saveConfigEditor()">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Add row button
+            const addBtn = document.createElement('button');
+            addBtn.className = 'mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold uppercase rounded transition-all';
+            addBtn.innerText = '+ Add Configuration';
+            addBtn.onclick = () => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-800/50 hover:bg-white/5 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 pr-4"><input type="text" placeholder="key" class="bg-transparent text-blue-400 font-mono text-xs w-full outline-none" onchange="saveConfigEditor()"></td>
+                    <td class="py-3"><input type="text" placeholder="value" class="bg-transparent text-slate-300 font-mono text-xs w-full outline-none" onchange="saveConfigEditor()"></td>
+                `;
+                tbody.appendChild(tr);
+            };
+
+            container.appendChild(table);
+            container.appendChild(addBtn);
+        }
+
+        function saveConfigEditor() {
+            const tbody = document.getElementById('config-table-body');
+            const rows = tbody.querySelectorAll('tr');
+            const data = {};
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const key = inputs[0].value.trim();
+                const val = inputs[1].value.trim();
+                if (key) {
+                    // Try to parse as number or bool if possible
+                    let parsedVal = val;
+                    if (val === 'true') parsedVal = true;
+                    else if (val === 'false') parsedVal = false;
+                    else if (!isNaN(val) && val !== '') parsedVal = parseFloat(val);
+                    data[key] = parsedVal;
+                }
+            });
+            
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (file) {
+                file.content = JSON.stringify(data, null, 2);
+                localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+            }
         }
 
         function saveActiveFile(showNotify = true) {
             const file = vfsGetNodeById(state.engine.vfs.activeFileId);
             if (file) {
-                file.content = document.getElementById('tory-editor').value;
+                if (file.name.endsWith('.toryconfig')) {
+                    saveConfigEditor();
+                } else {
+                    file.content = document.getElementById('tory-editor').value;
+                }
                 localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
                 if (showNotify) notify(`Saved ${file.name}`, 'success');
                 updateEngineStatus();
@@ -1976,7 +2120,10 @@ print("World Generated!");</pre>
                 { pattern: /\bupgrade\s*\(/g, replacement: 'setResearch(' },
                 { pattern: /\bbot\s*\(/g, replacement: 'botLogic(' },
                 { pattern: /\bplayer\s*\(/g, replacement: 'playerLogic(' },
-                { pattern: /\bid\s*\(/g, replacement: 'getEntityById(' }
+                { pattern: /\bid\s*\(/g, replacement: 'getEntityById(' },
+                { pattern: /\bhtml\s*\(/g, replacement: 'createUI(' },
+                { pattern: /\bcss\s*\(/g, replacement: 'applyStyle(' },
+                { pattern: /\bevent\s*\(/g, replacement: 'addEvent(' }
             ];
 
             mapping.forEach(m => {
@@ -2114,6 +2261,30 @@ print("World Generated!");</pre>
                 getEntityById: (id) => {
                     const ent = state.entities.find(e => e.id === id);
                     return ent ? { idx: state.entities.indexOf(ent), name: ent.name, type: ent.type } : null;
+                },
+                // --- UI/UX API ---
+                createUI: (html) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = html;
+                    const el = div.firstElementChild;
+                    if (el) {
+                        el.classList.add('tory-ui-element');
+                        container.appendChild(el);
+                        return el.id;
+                    }
+                    return null;
+                },
+                applyStyle: (id, css) => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.cssText += css;
+                },
+                addEvent: (id, type, toryFunc) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener(type, () => {
+                            if (typeof toryFunc === 'function') toryFunc();
+                        });
+                    }
                 },
                 random: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
                 getEntities: () => state.entities.map((e, i) => ({ idx: i, id: e.id, name: e.name, balance: e.balance, tiles: e.ownedCount })),
