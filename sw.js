@@ -1,6 +1,5 @@
 const CACHE_NAME = 'territory-io-v3.2.0';
 const ASSETS = [
-  '/',
   'index.html',
   'manifest.webmanifest',
   'assets/rocket.gif',
@@ -11,7 +10,10 @@ const ASSETS = [
   'assets/fx/launching-missile.mp3',
   'assets/fx/warplane-sound-effect.mp3',
   'assets/fx/warp_exp_sound.mp3',
-  'assets/fx/explosion_sound.mp3',
+  'assets/fx/explosion_sound.mp3'
+];
+
+const EXTERNAL_ASSETS = [
   'https://cdn.tailwindcss.com'
 ];
 
@@ -19,14 +21,23 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use individual add calls to ensure one missing asset doesn't break the entire installation
-      return Promise.all(
-        ASSETS.map((asset) => {
-          return cache.add(asset).catch((err) => {
-            console.error(`Failed to cache asset: ${asset}`, err);
-          });
-        })
-      );
+      // 1. Cache internal assets
+      const internalPromises = ASSETS.map((asset) => {
+        return cache.add(asset).catch((err) => {
+          console.error(`Failed to cache asset: ${asset}`, err);
+        });
+      });
+
+      // 2. Cache external assets with no-cors to avoid CORS issues
+      const externalPromises = EXTERNAL_ASSETS.map((url) => {
+        return fetch(url, { mode: 'no-cors' }).then((response) => {
+          return cache.put(url, response);
+        }).catch((err) => {
+          console.error(`Failed to cache external asset: ${url}`, err);
+        });
+      });
+
+      return Promise.all([...internalPromises, ...externalPromises]);
     })
   );
 });
