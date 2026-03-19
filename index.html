@@ -318,18 +318,13 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-        /* ToryEngine Viewport Optimization */
-        #sandbox-engine {
-            height: 100dvh; /* Use dynamic viewport height */
-            width: 100vw;
-            overflow: hidden;
+        /* Standalone App Improvements */
+        body.is-standalone #sandbox-engine {
+            border: none;
+            border-radius: 0;
         }
-        #sandbox-engine > div:first-child {
-            flex-shrink: 0; /* Prevent header from shrinking */
-        }
-        .engine-tab-content {
-            height: calc(100dvh - 64px); /* Adjust based on header height */
-            overflow-y: auto;
+        body.is-standalone #engine-fullscreen-btn {
+            display: none; /* Hide toggle if already in standalone which is usually full */
         }
     </style>
 </head>
@@ -431,66 +426,6 @@
             </div>
         </div>
     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- Windows EXE Card -->
-                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-blue-500/30 transition-all group">
-                            <div class="flex justify-between items-start">
-                                <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🪟</div>
-                                <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest border border-blue-500/30">Stable v3.2.0</span>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Windows Desktop</h3>
-                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
-                                    <li class="flex items-center gap-2"><span>✅</span> Direct VFS to Disk Sync</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Multi-window Scripting</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Hardware Acceleration+</li>
-                                </ul>
-                            </div>
-                            <button type="button" onclick="downloadNative('exe')" class="mt-auto bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">Download .EXE</button>
-                        </div>
-
-                        <!-- Android APK Card -->
-                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-emerald-500/30 transition-all group">
-                            <div class="flex justify-between items-start">
-                                <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🤖</div>
-                                <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-blue-500/30">Beta v3.2.0</span>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Android Mobile</h3>
-                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
-                                    <li class="flex items-center gap-2"><span>✅</span> Immersive Touch Studio</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Offline Map Sculpting</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Low-Latency Engine</li>
-                                </ul>
-                            </div>
-                            <button type="button" onclick="downloadNative('apk')" class="mt-auto bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20">Download .APK</button>
-                        </div>
-                    </div>
-
-                    <!-- Unique Native Improvements Info -->
-                    <div class="bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-10 rounded-[40px] border border-white/10">
-                        <h3 class="text-xl font-black text-white uppercase italic mb-6">Native Exclusives</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div class="space-y-3">
-                                <div class="text-blue-400 font-bold text-sm uppercase">Persistent VFS</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Unlike the browser version, the native engine maps your VFS directly to your system's storage, ensuring your maps and scripts are never lost.</p>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="text-purple-400 font-bold text-sm uppercase">Auto-Updater</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Stay synced with the GitHub master branch automatically. Receive new ToryScript APIs and engine optimizations as they launch.</p>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="text-emerald-400 font-bold text-sm uppercase">System Bridge</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Execute shell commands directly from ToryScript (Safe-Mode enabled) to integrate with your local development environment.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Aid Modal -->
     <div id="aid-modal" class="hidden fixed inset-0 bg-slate-950/90 z-[400] flex items-center justify-center p-6">
@@ -855,7 +790,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToryEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.2.0</span>
+                    <span id="engine-version-tag" class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.2.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -864,7 +799,7 @@
                     <button type="button" onclick="setEngineTab('docs')" id="tab-engine-docs" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Documentation">Docs</button>
                     <button type="button" onclick="setEngineTab('explorer')" id="tab-engine-explorer" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Asset Explorer">Assets</button>
                     <button type="button" onclick="setEngineTab('templates')" id="tab-engine-templates" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Map Templates">Templates</button>
-                    <button type="button" onclick="setEngineTab('download')" id="tab-engine-download" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Download ToryEngine">Download</button>
+                    <button type="button" onclick="setEngineTab('download')" id="tab-engine-download" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Download App">Download</button>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -876,6 +811,7 @@
                 <button type="button" onclick="saveEngineMap()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase border border-emerald-400/40 transition-colors" title="Save map to workspace">Save Map</button>
                 <button type="button" onclick="exportToryMap()" class="bg-purple-600 hover:bg-purple-500 px-4 py-1.5 rounded-lg text-white text-[10px] font-bold uppercase border border-purple-400/40 transition-colors" title="Export entire workspace as .torymap">Export Workspace</button>
                 <button type="button" onclick="importToryMapTrigger()" class="bg-slate-700 hover:bg-slate-600 px-4 py-1.5 rounded-lg text-slate-200 text-[10px] font-bold uppercase border border-slate-600 transition-colors" title="Import .torymap workspace">Import Workspace</button>
+                <button type="button" id="engine-fullscreen-btn" onclick="toggleEngineFullscreen()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg text-slate-300 text-[10px] font-bold uppercase border border-slate-700 transition-colors" title="Toggle Fullscreen">Fullscreen</button>
                 <input type="file" id="torymap-import-input" accept=".torymap" class="hidden" onchange="handleToryMapImport(this)">
                 <button type="button" onclick="closeSandboxEngine()" class="bg-slate-800 hover:bg-slate-700 px-4 py-1.5 rounded-lg text-slate-300 text-[10px] font-bold uppercase border border-slate-700 transition-colors" title="Exit Sandbox Engine">Exit</button>
             </div>
@@ -884,7 +820,7 @@
         <!-- Engine Content -->
         <div class="flex-1 flex overflow-hidden">
             <!-- Map Editor Tab -->
-            <div id="engine-content-editor" class="flex-1 relative bg-slate-900 flex flex-col engine-tab-content">
+            <div id="engine-content-editor" class="flex-1 relative bg-slate-900 flex flex-col">
                 <div class="flex-1 relative overflow-hidden" id="engine-viewport">
                     <canvas id="engine-canvas" class="absolute top-0 left-0"></canvas>
                 </div>
@@ -911,7 +847,7 @@
             </div>
 
             <!-- ToryScript Tab -->
-            <div id="engine-content-toryscript" class="hidden flex-1 flex bg-slate-950 engine-tab-content">
+            <div id="engine-content-toryscript" class="hidden flex-1 flex bg-slate-950">
                 <div class="w-64 border-r border-slate-800 flex flex-col">
                     <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                         <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Explorer</span>
@@ -944,7 +880,7 @@
             </div>
 
             <!-- ToryScript Documentation Tab -->
-            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
+            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
                 <div class="max-w-4xl mx-auto space-y-12">
                     <!-- Header -->
                     <div class="border-b border-white/10 pb-8">
@@ -1169,8 +1105,69 @@ cycle(tory() {
                 </div>
             </div>
 
-            <!-- Asset Explorer Tab -->
-            <div id="engine-content-explorer" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto engine-tab-content">
+            <!-- Download ToryEngine Tab -->
+            <div id="engine-content-download" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
+                <div class="max-w-4xl mx-auto space-y-12">
+                    <div class="text-center space-y-4">
+                        <h2 class="text-5xl font-black text-white italic uppercase tracking-tighter">ToryEngine Portable</h2>
+                        <p class="text-slate-400 text-lg">Take your architect tools everywhere. Install ToryEngine as a standalone app on your Desktop or Mobile device.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- PWA Section -->
+                        <div class="bg-slate-800/50 p-8 rounded-3xl border border-blue-500/20 space-y-6 flex flex-col">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center text-2xl">📱</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-white uppercase">Mobile APK (PWA)</h3>
+                                    <p class="text-slate-500 text-xs uppercase font-bold tracking-widest">Android & iOS</p>
+                                </div>
+                            </div>
+                            <p class="text-slate-400 text-sm leading-relaxed flex-1">Install ToryEngine directly from your browser. It behaves exactly like a native APK, featuring offline support, standalone windowing, and full-screen immersion.</p>
+                            <button id="pwa-install-btn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white shadow-lg shadow-blue-900/20 transition-all uppercase tracking-widest text-xs">
+                                Install on Device
+                            </button>
+                        </div>
+
+                        <!-- Desktop Section -->
+                        <div class="bg-slate-800/50 p-8 rounded-3xl border border-emerald-500/20 space-y-6 flex flex-col">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-2xl">💻</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-white uppercase">Desktop EXE (PWA)</h3>
+                                    <p class="text-slate-500 text-xs uppercase font-bold tracking-widest">Windows, Mac & Linux</p>
+                                </div>
+                            </div>
+                            <p class="text-slate-400 text-sm leading-relaxed flex-1">Convert ToryEngine into a desktop executable. No browser tabs, no distractions. Direct access from your taskbar with high-performance hardware acceleration.</p>
+                            <button onclick="installDesktopApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold text-white shadow-lg shadow-emerald-900/20 transition-all uppercase tracking-widest text-xs">
+                                Create Desktop Link
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Unique Improvements Section -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-amber-500 uppercase tracking-widest">App-Only Features</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-slate-900 border border-white/5 p-6 rounded-2xl">
+                                <div class="text-amber-400 font-black text-xs mb-2 uppercase">Fullscreen Immersion</div>
+                                <p class="text-slate-500 text-[10px] leading-relaxed">Standalone apps automatically hide browser UI for 100% viewport utilization.</p>
+                            </div>
+                            <div class="bg-slate-900 border border-white/5 p-6 rounded-2xl">
+                                <div class="text-amber-400 font-black text-xs mb-2 uppercase">VFS Persistence</div>
+                                <p class="text-slate-500 text-[10px] leading-relaxed">Scripts and maps are saved directly to local storage with automated periodic backups.</p>
+                            </div>
+                            <div class="bg-slate-900 border border-white/5 p-6 rounded-2xl">
+                                <div class="text-amber-400 font-black text-xs mb-2 uppercase">Offline Architect</div>
+                                <p class="text-slate-500 text-[10px] leading-relaxed">Full access to ToryScript and Map Editor even without an internet connection.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- File Explorer Tab -->
+            <div id="engine-content-explorer" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto">
                 <div class="max-w-4xl mx-auto">
                     <h3 class="text-xl font-bold text-white mb-6 uppercase tracking-widest">Virtual File System</h3>
                     <div class="grid grid-cols-4 gap-4" id="explorer-grid">
@@ -1180,7 +1177,7 @@ cycle(tory() {
             </div>
 
             <!-- Templates Tab -->
-            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
+            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
                 <div class="max-w-5xl mx-auto">
                     <div class="mb-10">
                         <h3 class="text-3xl font-black text-white italic uppercase tracking-tighter">Operational Blueprints</h3>
@@ -1193,67 +1190,6 @@ cycle(tory() {
                             <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🌍</div>
                             <div>
                                 <div class="font-black text-white uppercase text-sm tracking-widest mb-2">Standard FFA</div>
-            <!-- Download ToryEngine Tab -->
-            <div id="engine-content-download" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
-                <div class="max-w-4xl mx-auto space-y-12">
-                    <div class="border-b border-white/10 pb-8">
-                        <h2 class="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">Deploy Native Engine</h2>
-                        <p class="text-slate-400 text-lg leading-relaxed">Take ToryEngine beyond the browser. Download specialized native binaries for persistent development, advanced file system access, and optimized performance.</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-blue-500/30 transition-all group">
-                            <div class="flex justify-between items-start">
-                                <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🪟</div>
-                                <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest border border-blue-500/30">Stable v3.2.0</span>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Windows Desktop</h3>
-                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
-                                    <li class="flex items-center gap-2"><span>✅</span> Direct VFS to Disk Sync</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Multi-window Scripting</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Hardware Acceleration+</li>
-                                </ul>
-                            </div>
-                            <button type="button" onclick="downloadNative('exe')" class="mt-auto bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">Download .EXE</button>
-                        </div>
-
-                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-emerald-500/30 transition-all group">
-                            <div class="flex justify-between items-start">
-                                <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🤖</div>
-                                <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-blue-500/30">Beta v3.2.0</span>
-                            </div>
-                            <div>
-                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Android Mobile</h3>
-                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
-                                    <li class="flex items-center gap-2"><span>✅</span> Immersive Touch Studio</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Offline Map Sculpting</li>
-                                    <li class="flex items-center gap-2"><span>✅</span> Low-Latency Engine</li>
-                                </ul>
-                            </div>
-                            <button type="button" onclick="downloadNative('apk')" class="mt-auto bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20">Download .APK</button>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-10 rounded-[40px] border border-white/10">
-                        <h3 class="text-xl font-black text-white uppercase italic mb-6">Native Exclusives</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div class="space-y-3">
-                                <div class="text-blue-400 font-bold text-sm uppercase">Persistent VFS</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Unlike the browser version, the native engine maps your VFS directly to your system's storage, ensuring your maps and scripts are never lost.</p>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="text-purple-400 font-bold text-sm uppercase">Auto-Updater</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Stay synced with the GitHub master branch automatically. Receive new ToryScript APIs and engine optimizations as they launch.</p>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="text-emerald-400 font-bold text-sm uppercase">System Bridge</div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">Execute shell commands directly from ToryScript (Safe-Mode enabled) to integrate with your local development environment.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
                                 <div class="text-xs text-slate-500 leading-relaxed">Balanced ecosystem with moderate landmasses and strategic waterways. Optimized for 20+ entities.</div>
                             </div>
                             <button type="button" class="mt-auto bg-blue-600/20 text-blue-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] group-hover:bg-blue-600 group-hover:text-white transition-all">Deploy Blueprint</button>
@@ -1720,38 +1656,6 @@ cycle(tory() {
             document.getElementById('sandbox-engine').classList.add('hidden');
         }
 
-        function downloadNative(platform) {
-            notify(`Preparing ${platform.toUpperCase()} download...`, "info");
-            
-            // In a real scenario, this would point to a CI/CD build artifact or a GitHub release
-            const repoUrl = "https://github.com/everythingtt/territory-io/releases/latest";
-            
-            setTimeout(() => {
-                if (platform === 'exe') {
-                    window.open(`${repoUrl}/download/ToryEngine_Windows_x64.zip`, '_blank');
-                } else if (platform === 'apk') {
-                    window.open(`${repoUrl}/download/ToryEngine_Android_v3.2.0.apk`, '_blank');
-                }
-                notify("Download started! Follow the instructions in the native installer.", "success");
-            }, 1500);
-        }
-
-        // Native Mode Detection & unique improvements
-        state.isNative = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches || !!window.ToryNativeBridge;
-        
-        if (state.isNative) {
-            console.log("[ToryEngine] Native Mode Active. Enabling System Bridge and Direct VFS.");
-            // Add native-only API to ToryScript
-            window.addEventListener('load', () => {
-                // Example unique improvement: Fullscreen by default in native
-                if (document.documentElement.requestFullscreen) {
-                    document.body.addEventListener('click', () => {
-                        document.documentElement.requestFullscreen().catch(() => {});
-                    }, { once: true });
-                }
-            });
-        }
-
         function initSandboxEngine() {
             const eCanvas = document.getElementById('engine-canvas');
             eCanvas.width = 3840;
@@ -1877,6 +1781,17 @@ cycle(tory() {
             eCtx.fillRect(x * CONFIG.TILE_SIZE, y * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
             if (type === 5) { eCtx.fillStyle = 'white'; eCtx.font = '8px Arial'; eCtx.textAlign = 'center'; eCtx.fillText('🏠', (x+0.5)*CONFIG.TILE_SIZE, (y+0.5)*CONFIG.TILE_SIZE); }
             if (type === 6) { eCtx.fillStyle = 'white'; eCtx.font = '9px Arial'; eCtx.textAlign = 'center'; eCtx.fillText('👑', (x+0.5)*CONFIG.TILE_SIZE, (y+0.5)*CONFIG.TILE_SIZE); }
+        }
+
+        function toggleEngineFullscreen() {
+            const engine = document.getElementById('sandbox-engine');
+            if (!document.fullscreenElement) {
+                engine.requestFullscreen().catch(err => {
+                    notify(`Error enabling fullscreen: ${err.message}`, "error");
+                });
+            } else {
+                document.exitFullscreen();
+            }
         }
 
         function setEngineTab(tab) {
@@ -7597,6 +7512,63 @@ cycle(tory() {
 
         // Initialize Research Content
         setResearchTab('economic');
+
+        // --- PWA & Standalone App Logic ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('pwa-install-btn');
+            if (installBtn) {
+                installBtn.innerText = 'Install ToryEngine';
+                installBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        async function installDesktopApp() {
+            if (!deferredPrompt) {
+                notify("Installation not available. Already installed or browser not supported.", "info");
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                notify("Thank you for installing ToryEngine!", "success");
+                deferredPrompt = null;
+            }
+        }
+
+        // Add event listener for the install button in the Download tab
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'pwa-install-btn') {
+                installDesktopApp();
+            }
+        });
+
+        // Unique Improvements for Standalone Apps
+        function checkStandaloneMode() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isStandalone) {
+                document.body.classList.add('is-standalone');
+                // Automatically enable fullscreen for native feel
+                if (document.documentElement.requestFullscreen) {
+                    // Note: Must be triggered by user interaction, so we just log it for now
+                    console.log("Standalone mode detected. Fullscreen available.");
+                }
+                
+                // Add a unique "App Version" indicator
+                const versionSpan = document.getElementById('engine-version-tag');
+                if (versionSpan) versionSpan.innerText += ' [PRO]';
+            }
+        }
+        checkStandaloneMode();
+
+        // VFS Persistence Improvement: Save to LocalStorage on every change
+        function syncVFSToLocal() {
+            localStorage.setItem('tory_vfs_backup', JSON.stringify(state.engine.vfs));
+        }
+        // Hook into vfsCreateFile, vfsOpenFile, etc. if needed, or just periodic sync
+        setInterval(syncVFSToLocal, 30000); // Sync every 30s
 
         // Register Service Worker for Offline Support
         if ('serviceWorker' in navigator) {
