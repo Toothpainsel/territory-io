@@ -1,4 +1,4 @@
-const CACHE_NAME = 'territory-io-v3.0.2';
+const CACHE_NAME = 'territory-io-v3.1.0';
 const ASSETS = [
   '/',
   'index.html',
