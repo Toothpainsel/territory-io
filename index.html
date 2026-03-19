@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToryEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.0.3</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.1.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -869,216 +869,220 @@
             </div>
 
             <!-- ToryScript Documentation Tab -->
-            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto">
-                <div class="max-w-3xl mx-auto space-y-8">
-                    <div>
-                        <h3 class="text-2xl font-black text-white italic uppercase mb-2">ToryScript API</h3>
-                        <p class="text-slate-400 text-sm">ToryScript is a JavaScript-based API for generating custom maps in Territory.io.</p>
+            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
+                <div class="max-w-4xl mx-auto space-y-12">
+                    <!-- Header -->
+                    <div class="border-b border-white/10 pb-8">
+                        <h2 class="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">ToryScript Documentation</h2>
+                        <p class="text-slate-400 text-lg leading-relaxed">Welcome, Architect. ToryScript is the high-level operational language of Territory.io. It allows you to sculpt worlds, manipulate economies, and orchestrate global warfare with surgical precision.</p>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-6">
-                        <!-- Function Documentation -->
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">config(key, value)</code>
-                            <p class="text-slate-400 text-xs mt-2">Get or set global game configuration values (e.g., 'CYCLE', 'CITY_BONUS').</p>
+                    <!-- Getting Started -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center text-sm">01</span>
+                            Core Syntax
+                        </h3>
+                        <div class="bg-slate-800/30 p-6 rounded-3xl border border-white/5 space-y-4">
+                            <p class="text-slate-400 text-sm">ToryScript uses a transpiled JavaScript syntax. The primary keyword is <code class="text-blue-400">tory</code>, which serves as a universal declarator for functions and variables.</p>
+                            <pre class="bg-black/50 p-4 rounded-xl text-xs text-blue-300 font-mono">
+tory myBalance = 5000; // Variable declaration
+tory setupMap() {      // Function definition
+    reset();
+    print("Initializing...");
+}</pre>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">river(x1, y1, x2, y2, width)</code>
-                            <p class="text-slate-400 text-xs mt-2">Carves a river of water between two points with a specified width.</p>
+                    <!-- Graphics & Map API -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-blue-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center text-sm">02</span>
+                            Graphics & Map API
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">paint(x, y, w, h, type)</code>
+                                <p class="text-slate-400 text-xs mt-2">Fills a rectangle. Types: <code class="text-slate-300">'land'</code>, <code class="text-slate-300">'water'</code>. (Alias: <code class="text-blue-400">rect</code>)</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">line(x1, y1, x2, y2, type)</code>
+                                <p class="text-slate-400 text-xs mt-2">Draws a precise line between two sets of coordinates.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">river(x1, y1, x2, y2, width)</code>
+                                <p class="text-slate-400 text-xs mt-2">Carves an organic water path with variable thickness.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">cluster(x, y, size, type)</code>
+                                <p class="text-slate-400 text-xs mt-2">Generates a natural-looking cluster of land or mountains.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">seed(scale, threshold)</code>
+                                <p class="text-slate-400 text-xs mt-2">Procedural generation using noise. Higher scale = smaller islands.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">mountain(x, y, w, h)</code>
+                                <p class="text-slate-400 text-xs mt-2">Places impassable terrain (ID: -3). Essential for chokepoints.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">width(val) / height(val)</code>
+                                <p class="text-slate-400 text-xs mt-2">Resizes the map grid and redraws all tiles.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
+                                <code class="text-blue-400 font-bold text-sm">tilesize(val)</code>
+                                <p class="text-slate-400 text-xs mt-2">Changes the rendering size of each tile in pixels.</p>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">cluster(x, y, size, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Generates a random cluster of tiles around a point.</p>
+                    <!-- Logic & Hooks -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-sm">03</span>
+                            Game Logic & Hooks
+                        </h3>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">config(key, [value])</h4>
+                                    <p class="text-slate-400 text-xs italic">Modify engine constants like 'CYCLE', 'CITY_BONUS', or 'STARTING_SIZE'.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">tick(callback)</h4>
+                                    <p class="text-slate-400 text-xs italic">Hook into the 1-second game pulse.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">cycle(callback)</h4>
+                                    <p class="text-slate-400 text-xs italic">Hook into the 10-second economy pulse.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">claim(coords, owner)</h4>
+                                    <p class="text-slate-400 text-xs italic">Batch claim territory via [{x,y}, ...].</p>
+                                </div>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">tick(callback)</code>
-                            <p class="text-slate-400 text-xs mt-2">Registers a function to run every second during the game loop.</p>
+                    <!-- Entity & Diplomacy -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-purple-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-sm">04</span>
+                            Entities & Diplomacy
+                        </h3>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                                <code class="text-purple-400 font-bold text-sm">id(string)</code>
+                                <p class="text-slate-400 text-xs mt-2">Finds an entity by its ID (e.g., <code class="text-slate-300">'pr12'</code>). Returns an object with index and type.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                                <code class="text-purple-400 font-bold text-sm">bot(idx, [prop], [val])</code>
+                                <p class="text-slate-400 text-xs mt-2">Deep access to bot state. Modify <code class="text-slate-300">'balance'</code>, <code class="text-slate-300">'difficulty'</code>, or <code class="text-slate-300">'color'</code>.</p>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                                <code class="text-purple-400 font-bold text-sm">war(host, target)</code>
+                                <p class="text-slate-400 text-xs mt-2">Triggers a formal war declaration between two entity indices.</p>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">cycle(callback)</code>
-                            <p class="text-slate-400 text-xs mt-2">Registers a function to run every 10 seconds (every cycle).</p>
+                    <!-- UI/UX Construction -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-sm">05</span>
+                            UI/UX Construction
+                        </h3>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 space-y-6">
+                            <p class="text-slate-400 text-sm leading-relaxed">Build custom interfaces directly inside the game container. All elements are added to the persistent UI layer.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">html(str)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Inject DOM</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">css(id, style)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Apply Styling</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">event(id, type, fn)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Interaction</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">image(url, style)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Static Media</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">gif(url, style)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Animated GIF</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">audio(url, opts)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">MP3/Sound FX</span>
+                                </div>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">paint(x, y, width, height, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Fills a rectangular area with a specific tile type (Alias: rect).</p>
+                    <!-- Advanced Integration -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-slate-200 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-slate-200/20 rounded-lg flex items-center justify-center text-sm">06</span>
+                            Integration & External Control
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                                <h4 class="text-white font-bold text-sm mb-3 italic">Browser DevTools</h4>
+                                <pre class="bg-black/50 p-4 rounded-xl text-[10px] text-blue-400 font-mono">ToryScript.run("print('Connected')");</pre>
+                            </div>
+                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                                <h4 class="text-white font-bold text-sm mb-3 italic">External Apps (postMessage)</h4>
+                                <pre class="bg-black/50 p-4 rounded-xl text-[10px] text-emerald-400 font-mono">window.postMessage({
+  type: 'TORYSCRIPT_EXEC',
+  code: 'seed(0.2, 0.5);'
+}, '*');</pre>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">line(x1, y1, x2, y2, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Draws a line between two points.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">get(x, y)</code>
-                            <p class="text-slate-400 text-xs mt-2">Returns tile type at coordinates ('water', 'land', 'city', 'capital').</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">set(x, y, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Sets tile type at coordinates.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">research(tree, key)</code>
-                            <p class="text-slate-400 text-xs mt-2">Returns current research level for a tree/key.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">upgrade(tree, key, value)</code>
-                            <p class="text-slate-400 text-xs mt-2">Sets research level for a tree/key.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">bot(idx, property, value)</code>
-                            <p class="text-slate-400 text-xs mt-2">Get/set bot properties (e.g., 'difficulty', 'balance').</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">player(property, value)</code>
-                            <p class="text-slate-400 text-xs mt-2">Get/set player properties (e.g., 'balance').</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">id(id_string)</code>
-                            <p class="text-slate-400 text-xs mt-2">Find entity by ID (e.g., 'pr12') and return summary.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">mountain(x, y, width, height)</code>
-                            <p class="text-slate-400 text-xs mt-2">Places permanent mountains (ID: -3). Cannot be painted or spawned on.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">war(hostIdx, targetIdx)</code>
-                            <p class="text-slate-400 text-xs mt-2">Forces a war declaration between two entities.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">alliance(idx1, idx2, active)</code>
-                            <p class="text-slate-400 text-xs mt-2">Creates or breaks an alliance (active: true/false).</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">faction(name, members_array)</code>
-                            <p class="text-slate-400 text-xs mt-2">Creates a formal faction with a list of entity indices.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">html(string)</code>
-                            <p class="text-slate-400 text-xs mt-2">Injects custom HTML into the game container. Returns the element ID.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">css(id, styles)</code>
-                            <p class="text-slate-400 text-xs mt-2">Applies inline CSS styles to a UI element by ID.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">event(id, type, callback)</code>
-                            <p class="text-slate-400 text-xs mt-2">Attaches an event listener (e.g., 'click') to a UI element.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">island(x, y, radius, type)</code>
-                            <p class="text-slate-400 text-xs mt-2">Creates a circular shape of tiles.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">city(x, y)</code>
-                            <p class="text-slate-400 text-xs mt-2">Places a city at the specified coordinates.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">home(x, y)</code>
-                            <p class="text-slate-400 text-xs mt-2">Sets the player starting capital location. Only one capital can exist.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">seed(scale, threshold)</code>
-                            <p class="text-slate-400 text-xs mt-2">Generates procedural terrain across the entire map using sine-based noise.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">reset()</code>
-                            <p class="text-slate-400 text-xs mt-2">Resets the entire map to Land tiles.</p>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                            <code class="text-blue-400 font-bold text-sm">print(message)</code>
-                            <p class="text-slate-400 text-xs mt-2">Outputs a message to the engine console.</p>
-                        </div>
-                    </div>
-
-                    <div class="pt-8 border-t border-slate-800">
-                        <h3 class="text-2xl font-black text-white italic uppercase mb-2">Global API & Integration</h3>
-                        <p class="text-slate-400 text-sm mb-6">ToryScript can be executed from the browser console or third-party applications.</p>
+                    <!-- Example Scenarios -->
+                    <section class="space-y-6 pb-20">
+                        <h3 class="text-xl font-bold text-white uppercase tracking-widest">Master Scenarios</h3>
                         
-                        <div class="space-y-6">
-                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                                <h4 class="text-white font-bold uppercase text-sm mb-2">Browser Console</h4>
-                                <p class="text-slate-400 text-xs mb-3">Execute scripts directly via the global <code class="text-slate-200 bg-slate-900 px-1 rounded">ToryScript</code> object.</p>
-                                <pre class="bg-black p-4 rounded-xl text-xs text-blue-400 font-mono overflow-x-auto">ToryScript.run("player('balance', 1000000); print('Funds added!');");</pre>
-                            </div>
+                        <!-- Scenario 1 -->
+                        <div class="bg-slate-800/30 rounded-3xl border border-white/5 overflow-hidden">
+                            <div class="bg-white/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Organic Archipelago with UI</div>
+                            <div class="p-6">
+                                <pre class="bg-black/50 p-6 rounded-2xl text-xs text-blue-300 font-mono overflow-x-auto leading-relaxed">
+reset();
+seed(0.15, 0.4); // Base noise
 
-                            <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
-                                <h4 class="text-white font-bold uppercase text-sm mb-2">Third-Party Apps (postMessage)</h4>
-                                <p class="text-slate-400 text-xs mb-3">Send commands from external iframes or scripts using the standard web messaging API.</p>
-                                <pre class="bg-black p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto">
-window.postMessage({
-    type: 'TORYSCRIPT_EXEC',
-    code: "seed(0.2, 0.5); print('Map updated via external app');"
-}, "*");</pre>
+// Carve a central shipping lane
+river(0, 108, 384, 108, 10);
+
+// Add a custom HUD
+tory hud = html("&lt;div id='map-hud'&gt;Archipelago Mode Active&lt;/div&gt;");
+css(hud, "position:fixed; top:20px; right:20px; background:rgba(0,0,0,0.8); color:cyan; padding:15px; border-radius:12px; font-weight:bold; border:1px solid cyan;");
+
+print("Scenario Initialized.");</pre>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="pt-8 border-t border-slate-800">
-                        <h4 class="text-sm font-bold text-white uppercase mb-4">Advanced Example: Archipelago</h4>
-                        <pre class="bg-black p-6 rounded-xl text-xs text-emerald-500 font-mono overflow-x-auto">
-// Reset map
-reset();
-
-// Generate base terrain
-seed(0.15, 0.4);
-
-// Custom generator
-tory myIsland(x, y) {
-    island(x, y, 30, 'land');
-}
-
-myIsland(100, 100);
-myIsland(250, 150);
-
-// Place cities
-city(100, 100);
-city(250, 150);
-
-// Set start point
-home(100, 100);
-
-print("World Generated!");</pre>
-                    </div>
-
-                    <div class="pt-8 border-t border-slate-800">
-                        <h4 class="text-sm font-bold text-white uppercase mb-4">UI/UX Example: Custom Button</h4>
-                        <pre class="bg-black p-6 rounded-xl text-xs text-blue-400 font-mono overflow-x-auto">
-// Create a button
-tory btnId = html("&lt;button id='my-btn'&gt;Click Me!&lt;/button&gt;");
-
-// Style it
-css(btnId, "position:fixed; left:50%; top:20px; transform:translateX(-50%); background:#3b82f6; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; z-index:1000");
-
-// Add interaction
-event(btnId, 'click', tory() {
-    print("Custom UI Button Clicked!");
-    player('balance', 5000);
+                        <!-- Scenario 2 -->
+                        <div class="bg-slate-800/30 rounded-3xl border border-white/5 overflow-hidden">
+                            <div class="bg-white/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">War Orchestrator</div>
+                            <div class="p-6">
+                                <pre class="bg-black/50 p-6 rounded-2xl text-xs text-purple-300 font-mono overflow-x-auto leading-relaxed">
+cycle(tory() {
+    tory ents = getEntities();
+    if (ents.length > 2) {
+        // Force a war between the two strongest bots every 10s
+        war(2, 3);
+        print("War forced between " + ents[2].name + " and " + ents[3].name);
+    }
 });</pre>
-                    </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
 
@@ -1093,36 +1097,40 @@ event(btnId, 'click', tory() {
             </div>
 
             <!-- Templates Tab -->
-            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto">
-                <div class="max-w-4xl mx-auto">
-                    <h3 class="text-xl font-bold text-white mb-6 uppercase tracking-widest">Map Templates</h3>
-                    <div class="grid grid-cols-3 gap-6" id="templates-grid">
+            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
+                <div class="max-w-5xl mx-auto">
+                    <div class="mb-10">
+                        <h3 class="text-3xl font-black text-white italic uppercase tracking-tighter">Operational Blueprints</h3>
+                        <p class="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Pre-configured battlegrounds for rapid deployment</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="templates-grid">
                         <!-- Template cards -->
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex flex-col gap-4 hover:bg-slate-800 transition-all cursor-pointer group" onclick="loadTemplate('standard')">
-                            <div class="text-4xl">🌍</div>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-blue-500/30 transition-all cursor-pointer group" onclick="loadTemplate('standard')">
+                            <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🌍</div>
                             <div>
-                                <div class="font-bold text-white uppercase text-sm">Standard FFA</div>
-                                <div class="text-xs text-slate-500 mt-1">Balanced land/water ratio for free-for-all.</div>
+                                <div class="font-black text-white uppercase text-sm tracking-widest mb-2">Standard FFA</div>
+                                <div class="text-xs text-slate-500 leading-relaxed">Balanced ecosystem with moderate landmasses and strategic waterways. Optimized for 20+ entities.</div>
                             </div>
-                            <button type="button" class="mt-auto bg-blue-600/20 text-blue-400 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest group-hover:bg-blue-600 group-hover:text-white transition-all">Load Template</button>
+                            <button type="button" class="mt-auto bg-blue-600/20 text-blue-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] group-hover:bg-blue-600 group-hover:text-white transition-all">Deploy Blueprint</button>
                         </div>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex flex-col gap-4 hover:bg-slate-800 transition-all cursor-pointer group" onclick="loadTemplate('islands')">
-                            <div class="text-4xl">🏝️</div>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-cyan-500/30 transition-all cursor-pointer group" onclick="loadTemplate('islands')">
+                            <div class="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🏝️</div>
                             <div>
-                                <div class="font-bold text-white uppercase text-sm">Archipelago</div>
-                                <div class="text-xs text-slate-500 mt-1">Numerous small islands separated by deep water.</div>
+                                <div class="font-black text-white uppercase text-sm tracking-widest mb-2">Archipelago</div>
+                                <div class="text-xs text-slate-500 leading-relaxed">Extreme naval focus. Dozens of isolated islands requiring heavy transport and air support usage.</div>
                             </div>
-                            <button type="button" class="mt-auto bg-blue-600/20 text-blue-400 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest group-hover:bg-blue-600 group-hover:text-white transition-all">Load Template</button>
+                            <button type="button" class="mt-auto bg-cyan-600/20 text-cyan-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] group-hover:bg-cyan-600 group-hover:text-white transition-all">Deploy Blueprint</button>
                         </div>
 
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex flex-col gap-4 hover:bg-slate-800 transition-all cursor-pointer group" onclick="loadTemplate('fortress')">
-                            <div class="text-4xl">🏰</div>
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-amber-500/30 transition-all cursor-pointer group" onclick="loadTemplate('fortress')">
+                            <div class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🏰</div>
                             <div>
-                                <div class="font-bold text-white uppercase text-sm">Team Fortress</div>
-                                <div class="text-xs text-slate-500 mt-1">Central landmass with fortified spawn points.</div>
+                                <div class="font-black text-white uppercase text-sm tracking-widest mb-2">Iron Fortress</div>
+                                <div class="text-xs text-slate-500 leading-relaxed">Single massive continent with a central mountain range. High population density and rapid expansion.</div>
                             </div>
-                            <button type="button" class="mt-auto bg-blue-600/20 text-blue-400 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest group-hover:bg-blue-600 group-hover:text-white transition-all">Load Template</button>
+                            <button type="button" class="mt-auto bg-amber-600/20 text-amber-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] group-hover:bg-amber-600 group-hover:text-white transition-all">Deploy Blueprint</button>
                         </div>
                     </div>
                 </div>
@@ -1133,7 +1141,7 @@ event(btnId, 'click', tory() {
     <div id="login-screen" class="fixed inset-0 bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_55%)] z-[100] flex items-center justify-center p-6">
         <div class="bg-slate-900/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/80 shadow-[0_30px_80px_rgba(2,6,23,0.9)] w-full max-w-md">
             <div class="flex items-center justify-end mb-4">
-                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v3.0.3</span>
+                <span class="px-2 py-1 rounded-md border border-slate-700 bg-slate-950 text-[9px] text-slate-400 font-mono uppercase">v3.1.0</span>
             </div>
             <h1 class="text-3xl font-black text-center text-blue-400 mb-6 italic tracking-tight">TERRITORY.IO</h1>
             
@@ -1403,6 +1411,7 @@ event(btnId, 'click', tory() {
             MAX_DAMS: 100,
             TRANSPORT_COST: 500,
             MIN_CITY_DISTANCE: 5,
+            STARTING_SIZE: 6,
             UPDATE_CHECK_INTERVAL: 60000, // Check every 60 seconds
             MIN_ZOOM: 0.2,
             MAX_ZOOM: 3.0,
@@ -1413,7 +1422,7 @@ event(btnId, 'click', tory() {
         };
 
         const state = {
-            version: '3.0.3', // Current version tag (Advanced Map & Logic Hooks)
+            version: '3.1.0', // Current version tag (Multimedia & Map Editor)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
@@ -1514,7 +1523,7 @@ event(btnId, 'click', tory() {
                             { id: 'f1', name: 'scripts', type: 'folder', children: [
                                 { id: 's1', name: 'main.tory', type: 'script', content: '// ToryScript v2.9\nprint("Engine Booted...");\n\n// Run on game start\ntory onStart() {\n    reset();\n    seed(0.1, 0.45);\n    home(192, 108);\n}\n\nonStart();' },
                                 { id: 's2', name: 'archipelago.tory', type: 'script', content: '// ToryScript Archipelago Generator\nreset();\nseed(0.2, 0.5);\n\n// Add some manual islands\nisland(100, 100, 20, "land");\nisland(284, 150, 15, "land");\n\n// Add cities\ncity(100, 100);\ncity(284, 150);\n\nhome(100, 100);\nprint("Archipelago Generated!");' },
-                                { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: '// Advanced Workspace Explorer\n// Injects a temporary sidebar to view VFS\n\ntory toggleExplorer() {\n    tory id = "tory-explorer-sidebar";\n    tory existing = document.getElementById(id);\n    if (existing) {\n        existing.remove();\n        print("Explorer Closed.");\n        return;\n    }\n\n    tory sidebar = document.createElement("div");\n    sidebar.id = id;\n    sidebar.style.cssText = "position:fixed;right:0;top:0;width:300px;height:100vh;background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:20px;color:white;font-family:sans-serif;overflow-y:auto;transition:all 0.3s ease";\n    \n    tory html = "<h2 style=\'margin-bottom:20px;font-size:18px;font-style:italic;font-weight:900\'>WORKSPACE EXPLORER</h2>";\n    \n    tory entities = getEntities();\n    html += "<div style=\'margin-bottom:20px;padding:15px;background:rgba(255,255,255,0.05);border-radius:12px\'>";\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:5px\'>MAP STATS</div>";\n    html += "<div>Entities: " + entities.length + "</div>";\n    html += "<div>Version: " + VERSION + "</div>";\n    html += "</div>";\n\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:bold;margin-bottom:10px\'>ACTIVE VFS LOG</div>";\n    html += "<div id=\'explorer-vfs-content\' style=\'font-size:12px;display:flex;flex-direction:column;gap:8px\'>";\n    html += "Searching VFS...</div>";\n\n    sidebar.innerHTML = html;\n    document.body.appendChild(sidebar);\n    print("Explorer Opened.");\n}\n\ntoggleExplorer();' },
+                                { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: '// Advanced Workspace Explorer v2.0\n// Sculpted for the immersive architect.\n\ntory toggleExplorer() {\n    tory id = "tory-explorer-sidebar";\n    tory existing = document.getElementById(id);\n    if (existing) {\n        existing.style.transform = "translateX(100%)";\n        setTimeout(tory() { existing.remove(); }, 300);\n        print("Explorer Disengaged.");\n        return;\n    }\n\n    tory sidebar = document.createElement("div");\n    sidebar.id = id;\n    sidebar.style.cssText = "position:fixed;right:0;top:0;width:350px;height:100vh;background:rgba(2,6,23,0.9);backdrop-filter:blur(20px);border-left:1px solid rgba(59,130,246,0.2);z-index:9999;padding:30px;color:white;font-family:\'Inter\',sans-serif;overflow-y:auto;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:-20px 0 50px rgba(0,0,0,0.5)";\n    \n    tory html = "<h2 style=\'margin-bottom:25px;font-size:20px;font-style:italic;font-weight:900;color:#3b82f6;letter-spacing:-0.05em\'>CORE WORKSPACE</h2>";\n    \n    tory entities = getEntities();\n    html += "<div style=\'margin-bottom:25px;padding:20px;background:rgba(59,130,246,0.05);border-radius:16px;border:1px solid rgba(59,130,246,0.1)\'>";\n    html += "<div style=\'font-size:10px;color:#3b82f6;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px\'>System Diagnostics</div>";\n    html += "<div style=\'display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px\'><span>Active Entities:</span><span style=\'color:#3b82f6;font-weight:bold\'>" + entities.length + "</span></div>";\n    html += "<div style=\'display:flex;justify-content:space-between;font-size:13px\'><span>Engine Version:</span><span style=\'color:#3b82f6;font-weight:bold\'>" + VERSION + "</span></div>";\n    html += "</div>";\n\n    html += "<div style=\'font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:15px\'>Virtual File System</div>";\n    html += "<div id=\'explorer-vfs-content\' style=\'display:flex;flex-direction:column;gap:10px\'></div>";\n\n    sidebar.innerHTML = html;\n    document.body.appendChild(sidebar);\n    \n    // Force reflow for animation\n    sidebar.offsetHeight;\n    sidebar.style.transform = "translateX(0)";\n    \n    print("Explorer Synchronized.");\n}\n\ntoggleExplorer();' },
                                 { id: 's4', name: 'live_mod.tory', type: 'script', content: '// Live Mod Example\n// Increases player balance every cycle and logs every tick\n\ntick(tory() {\n    // This runs every second\n    // print("Tick..."); \n});\n\ncycle(tory() {\n    // This runs every 10 seconds\n    tory current = player("balance");\n    player("balance", current + 1000);\n    print("Cycle Bonus: +$1000");\n});\n\nprint("Live Mod Active!");' },
                                 { id: 'f1_bots', name: 'bots', type: 'folder', children: [
                                     { id: 's_aggro', name: 'aggressive.tory', type: 'script', content: '// Aggressive Bot Logic\ntory onBotTick(botIdx) {\n    tory b = bot(botIdx);\n    if (b.balance > 500) {\n        // Expansion logic\n    }\n}' }
@@ -2158,12 +2167,18 @@ event(btnId, 'click', tory() {
                 { pattern: /\bhtml\s*\(/g, replacement: 'createUI(' },
                 { pattern: /\bcss\s*\(/g, replacement: 'applyStyle(' },
                 { pattern: /\bevent\s*\(/g, replacement: 'addEvent(' },
+                { pattern: /\bimage\s*\(/g, replacement: 'createImage(' },
+                { pattern: /\bgif\s*\(/g, replacement: 'createGif(' },
+                { pattern: /\baudio\s*\(/g, replacement: 'createAudio(' },
                 { pattern: /\bconfig\s*\(/g, replacement: 'gameConfig(' },
                 { pattern: /\briver\s*\(/g, replacement: 'drawRiver(' },
                 { pattern: /\bcluster\s*\(/g, replacement: 'drawCluster(' },
                 { pattern: /\btick\s*\(/g, replacement: 'onTick(' },
                 { pattern: /\bcycle\s*\(/g, replacement: 'onCycle(' },
-                { pattern: /\bclaim\s*\(/g, replacement: 'claimAll(' }
+                { pattern: /\bclaim\s*\(/g, replacement: 'claimAll(' },
+                { pattern: /\bwidth\s*\(/g, replacement: 'setMapWidth(' },
+                { pattern: /\bheight\s*\(/g, replacement: 'setMapHeight(' },
+                { pattern: /\btilesize\s*\(/g, replacement: 'setTileSize(' }
             ];
 
             mapping.forEach(m => {
@@ -2294,6 +2309,27 @@ event(btnId, 'click', tory() {
                     if (state.engine.initialized) drawEngineMap();
                     else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
                 },
+                setMapWidth: (val) => {
+                    if (typeof val === 'number' && val > 0) {
+                        resizeGrid(val, CONFIG.ROWS);
+                    }
+                },
+                setMapHeight: (val) => {
+                    if (typeof val === 'number' && val > 0) {
+                        resizeGrid(CONFIG.COLS, val);
+                    }
+                },
+                setTileSize: (val) => {
+                    if (typeof val === 'number' && val > 0) {
+                        CONFIG.TILE_SIZE = val;
+                        canvas.width = CONFIG.COLS * val;
+                        canvas.height = CONFIG.ROWS * val;
+                        container.style.width = `${canvas.width}px`;
+                        container.style.height = `${canvas.height}px`;
+                        drawRegion(0, 0, CONFIG.COLS - 1, CONFIG.ROWS - 1);
+                        notify(`Tile size updated to ${val}px`, "info");
+                    }
+                },
                 noise: (scale = 0.1, threshold = 0.45) => {
                     for (let i = 0; i < CONFIG.ROWS; i++) {
                         for (let j = 0; j < CONFIG.COLS; j++) {
@@ -2362,6 +2398,32 @@ event(btnId, 'click', tory() {
                         return el.id;
                     }
                     return null;
+                },
+                createImage: (url, styles = "") => {
+                    const id = `tory-img-${Date.now()}`;
+                    const img = document.createElement('img');
+                    img.id = id;
+                    img.src = url;
+                    img.style.cssText = styles;
+                    img.classList.add('tory-ui-element');
+                    container.appendChild(img);
+                    return id;
+                },
+                createGif: (url, styles = "") => {
+                    return ToryScript.api().createImage(url, styles); // Same as image
+                },
+                createAudio: (url, options = {}) => {
+                    const a = new Audio(url);
+                    if (options.loop) a.loop = true;
+                    if (options.volume !== undefined) a.volume = options.volume;
+                    if (options.autoplay) a.play().catch(() => {});
+                    return {
+                        play: () => a.play().catch(() => {}),
+                        pause: () => a.pause(),
+                        stop: () => { a.pause(); a.currentTime = 0; },
+                        setVolume: (v) => a.volume = v,
+                        handle: a
+                    };
                 },
                 applyStyle: (id, css) => {
                     const el = document.getElementById(id);
@@ -2554,6 +2616,49 @@ event(btnId, 'click', tory() {
         const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for CPU performance
         const label = document.getElementById('user-territory-label');
         const donutMenu = document.getElementById('city-donut-menu');
+
+        function resizeGrid(newCols, newRows) {
+            const oldCols = CONFIG.COLS;
+            const oldRows = CONFIG.ROWS;
+            const oldTileTypes = new Uint8Array(state.tileTypes);
+            const oldTileOwners = new Uint8Array(state.tileOwners);
+            const oldCityLevels = new Uint8Array(state.cityLevels);
+            const oldCityPopulations = new Uint32Array(state.cityPopulations);
+            const oldTileFlags = new Uint8Array(state.tileFlags);
+
+            CONFIG.COLS = newCols;
+            CONFIG.ROWS = newRows;
+            const newSize = newCols * newRows;
+
+            state.tileTypes = new Uint8Array(newSize).fill(1);
+            state.tileOwners = new Uint8Array(newSize);
+            state.cityLevels = new Uint8Array(newSize);
+            state.cityPopulations = new Uint32Array(newSize);
+            state.tileFlags = new Uint8Array(newSize);
+
+            // Copy old data to new positions
+            for (let y = 0; y < Math.min(oldRows, newRows); y++) {
+                for (let x = 0; x < Math.min(oldCols, newCols); x++) {
+                    const oldIdx = y * oldCols + x;
+                    const newIdx = y * newCols + x;
+                    state.tileTypes[newIdx] = oldTileTypes[oldIdx];
+                    state.tileOwners[newIdx] = oldTileOwners[oldIdx];
+                    state.cityLevels[newIdx] = oldTileLevels[oldIdx];
+                    state.cityPopulations[newIdx] = oldCityPopulations[oldIdx];
+                    state.tileFlags[newIdx] = oldTileFlags[oldIdx];
+                }
+            }
+
+            // Update canvas and container size
+            canvas.width = newCols * CONFIG.TILE_SIZE;
+            canvas.height = newRows * CONFIG.TILE_SIZE;
+            container.style.width = `${canvas.width}px`;
+            container.style.height = `${canvas.height}px`;
+
+            // Full redraw
+            drawRegion(0, 0, newCols - 1, newRows - 1);
+            notify(`Map resized to ${newCols}x${newRows}`, "info");
+        }
 
         function updateMaxEntities(mode) {
             const limit = mode === 'team' ? 100 : 50;
@@ -3024,15 +3129,16 @@ event(btnId, 'click', tory() {
                 sx = forcedSx; sy = forcedSy;
             } else {
                 let validSpots = [];
-                // Search for a 6x6 area that is entirely wild land
+                const size = CONFIG.STARTING_SIZE;
+                // Search for a STARTING_SIZE x STARTING_SIZE area that is entirely wild land
                 for (let i = 0; i < state.tileTypes.length; i++) {
                     const tsx = i % CONFIG.COLS;
                     const tsy = Math.floor(i / CONFIG.COLS);
-                    if (tsx + 6 >= CONFIG.COLS || tsy + 6 >= CONFIG.ROWS) continue;
+                    if (tsx + size >= CONFIG.COLS || tsy + size >= CONFIG.ROWS) continue;
                     
                     let isAreaValid = true;
-                    for (let y = 0; y < 6; y++) {
-                        for (let x = 0; x < 6; x++) {
+                    for (let y = 0; y < size; y++) {
+                        for (let x = 0; x < size; x++) {
                             const idx = (tsy + y) * CONFIG.COLS + (tsx + x);
                             if (state.tileTypes[idx] !== 1 || state.tileOwners[idx] !== 0 || state.tileTypes[idx] === 7) {
                                 isAreaValid = false; break;
@@ -3051,19 +3157,22 @@ event(btnId, 'click', tory() {
                 
                 if (validSpots.length === 0) return;
                 const spawnIdx = validSpots[Math.floor(Math.random() * validSpots.length)];
-                // Clamp sx, sy to ensure 6x6 area fits on map
-                sx = Math.min(CONFIG.COLS - 6, spawnIdx % CONFIG.COLS);
-                sy = Math.min(CONFIG.ROWS - 6, Math.floor(spawnIdx / CONFIG.COLS));
+                // Clamp sx, sy to ensure STARTING_SIZE x STARTING_SIZE area fits on map
+                sx = Math.min(CONFIG.COLS - size, spawnIdx % CONFIG.COLS);
+                sy = Math.min(CONFIG.ROWS - size, Math.floor(spawnIdx / CONFIG.COLS));
             }
             
-            for (let y = 0; y < 6; y++) {
-                for (let x = 0; x < 6; x++) {
+            const size = CONFIG.STARTING_SIZE;
+            const halfSize = Math.floor(size / 2);
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
                     const tx = sx + x;
                     const ty = sy + y;
                     const idx = ty * CONFIG.COLS + tx;
                     if (state.tileTypes[idx] === 0) state.tileTypes[idx] = 1;
                     claim(tx, ty, true, ownerIdx, true);
-                    if (x === 3 && y === 3) {
+                    if (x === halfSize && y === halfSize) {
                         state.tileTypes[idx] = 6;
                         entity.hasCapital = true;
                         entity.capitalPos = {x: tx, y: ty};
@@ -3083,9 +3192,9 @@ event(btnId, 'click', tory() {
                     }
                 }
             }
-            drawRegion(sx, sy, sx + 5, sy + 5);
+            drawRegion(sx, sy, sx + size - 1, sy + size - 1);
             if (ownerIdx === 1) {
-                centerCameraOn(sx + 3, sy + 3);
+                centerCameraOn(sx + halfSize, sy + halfSize);
                 updateLabel();
             }
         }
