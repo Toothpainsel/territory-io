@@ -1247,20 +1247,30 @@ tory setupMap() {      // Function definition
                         
                         <!-- Scenario 1 -->
                         <div class="bg-slate-800/30 rounded-3xl border border-white/5 overflow-hidden">
-                            <div class="bg-white/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Organic Archipelago with UI</div>
+                            <div class="bg-white/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Interactive Scenario: World Architect</div>
                             <div class="p-6">
                                 <pre class="bg-black/50 p-6 rounded-2xl text-xs text-blue-300 font-mono overflow-x-auto leading-relaxed">
 reset();
-seed(0.15, 0.4); // Base noise
+seed(0.15, 0.4);
 
-// Carve a central shipping lane
-river(0, 108, 384, 108, 10);
+// Create an interactive control panel in the HUD
+tory myPanel = panel("Architect Tools", "Sculpt your world with precision.", { 
+    layer: "hud", 
+    style: "top: 20px; right: 20px;" 
+});
 
-// Add a custom HUD to the fixed layer (doesn't zoom)
-tory hud = html("&lt;div id='map-hud'&gt;Archipelago Mode Active&lt;/div&gt;", "hud");
-css(hud, "position:fixed; top:20px; right:20px; background:rgba(0,0,0,0.8); color:cyan; padding:15px; border-radius:12px; font-weight:bold; border:1px solid cyan;");
+// Add functional buttons to the panel
+button("Refresh Map", tory() { seed(0.2, 0.5); update(); }, { 
+    id: "btn-refresh", 
+    style: "margin-top: 10px; width: 100%;" 
+});
 
-print("Scenario Initialized.");</pre>
+button("Clear UI", tory() { clearUI(); }, { 
+    class: "bg-red-600 hover:bg-red-500", 
+    style: "margin-top: 5px; width: 100%;" 
+});
+
+print("Architect Scenario Initialized.");</pre>
                             </div>
                         </div>
 
@@ -2579,6 +2589,9 @@ toggleExplorer();` },
                 { pattern: /\bplayer\s*\(/g, replacement: 'playerLogic(' },
                 { pattern: /\bid\s*\(/g, replacement: 'getEntityById(' },
                 { pattern: /\bhtml\s*\(/g, replacement: 'createUI(' },
+                { pattern: /\bbutton\s*\(/g, replacement: 'createButton(' },
+                { pattern: /\bpanel\s*\(/g, replacement: 'createPanel(' },
+                { pattern: /\bmodal\s*\(/g, replacement: 'createModal(' },
                 { pattern: /\bcss\s*\(/g, replacement: 'applyStyle(' },
                 { pattern: /\bevent\s*\(/g, replacement: 'addEvent(' },
                 { pattern: /\bremoveUI\s*\(/g, replacement: 'removeUI(' },
@@ -2866,6 +2879,83 @@ toggleExplorer();` },
                     if (state.engine.initialized) drawEngineMap();
                     else drawRegion(0, 0, CONFIG.COLS-1, CONFIG.ROWS-1);
                 },
+                // --- High-Level UI Factory ---
+                createButton: (label, callback, options = {}) => {
+                    const btn = document.createElement('button');
+                    btn.id = options.id || `tory-btn-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                    btn.innerText = label;
+                    btn.className = `tory-ui-element px-4 py-2 rounded-xl font-bold uppercase text-[10px] transition-all active:scale-95 ${options.class || 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/20'}`;
+                    if (options.style) btn.style.cssText += options.style;
+                    btn.dataset.scriptId = scriptId;
+                    
+                    if (typeof callback === 'function') {
+                        btn.onclick = (e) => {
+                            try { callback(e); }
+                            catch (err) { console.error(`[ToryScript] Button error [${label}]:`, err); }
+                        };
+                    }
+
+                    const layerEl = document.getElementById(options.layer === 'hud' ? 'tory-hud-layer' : 'tory-ui-layer');
+                    if (layerEl) layerEl.appendChild(btn);
+                    return btn.id;
+                },
+                createPanel: (title, content = "", options = {}) => {
+                    const panel = document.createElement('div');
+                    panel.id = options.id || `tory-panel-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                    panel.className = `tory-ui-element bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 ${options.class || ''}`;
+                    panel.style.cssText = `position: absolute; min-width: 200px; ${options.style || ''}`;
+                    panel.dataset.scriptId = scriptId;
+
+                    let html = `<div class="flex justify-between items-center border-b border-white/5 pb-3">
+                        <h3 class="text-xs font-black text-white uppercase italic tracking-tighter">${title}</h3>
+                        ${options.closable ? `<button onclick="this.closest('.tory-ui-element').remove()" class="text-slate-500 hover:text-white">✕</button>` : ''}
+                    </div>
+                    <div class="panel-content text-[10px] text-slate-400 leading-relaxed">${content}</div>`;
+                    
+                    panel.innerHTML = html;
+                    const layerEl = document.getElementById(options.layer === 'hud' ? 'tory-hud-layer' : 'tory-ui-layer');
+                    if (layerEl) layerEl.appendChild(panel);
+                    return panel.id;
+                },
+                createModal: (title, content = "", options = {}) => {
+                    const overlay = document.createElement('div');
+                    overlay.id = options.id || `tory-modal-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                    overlay.className = "tory-ui-element fixed inset-0 bg-black/60 backdrop-blur-sm z-[5000] flex items-center justify-center p-6";
+                    overlay.dataset.scriptId = scriptId;
+
+                    const modal = document.createElement('div');
+                    modal.className = "bg-slate-900 border border-white/10 rounded-[40px] p-10 max-w-md w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200";
+                    
+                    modal.innerHTML = `
+                        <div class="text-center mb-8">
+                            <h2 class="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">${title}</h2>
+                            <div class="h-1 w-12 bg-blue-600 mx-auto rounded-full"></div>
+                        </div>
+                        <div class="text-slate-400 text-sm leading-relaxed mb-8">${content}</div>
+                        <div class="flex gap-3" id="${overlay.id}-actions">
+                            ${options.buttons ? '' : `<button onclick="this.closest('.tory-ui-element').remove()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-bold text-white transition-all">CLOSE</button>`}
+                        </div>
+                    `;
+
+                    overlay.appendChild(modal);
+                    document.body.appendChild(overlay);
+
+                    if (options.buttons) {
+                        const actions = modal.querySelector(`#${overlay.id}-actions`);
+                        options.buttons.forEach(b => {
+                            const btn = document.createElement('button');
+                            btn.innerText = b.label;
+                            btn.className = `flex-1 py-4 rounded-2xl font-bold transition-all ${b.primary ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`;
+                            btn.onclick = () => {
+                                if (typeof b.callback === 'function') b.callback();
+                                if (!b.keepOpen) overlay.remove();
+                            };
+                            actions.appendChild(btn);
+                        });
+                    }
+
+                    return overlay.id;
+                },
                 createUI: (html, layer = 'map') => {
                     const layerEl = document.getElementById(layer === 'hud' ? 'tory-hud-layer' : 'tory-ui-layer');
                     if (!layerEl) return null;
@@ -3023,7 +3113,10 @@ toggleExplorer();` },
                 console.log("- tory x = 10; : Define variable");
                 console.log("- print(msg) : Log to console");
                 console.log("- html(str, [layer]) : Inject UI ('map' or 'hud')");
-                console.log("- css(id, style) : Style injected elements");
+                console.log("- button(lbl, fn, [opts]) : Create functional button");
+                console.log("- panel(title, html, [opts]) : Create styled container");
+                console.log("- modal(title, html, [opts]) : Create interactive modal");
+                console.log("- css(selector, style) : Style injected elements");
                 console.log("- removeUI(selector) : Remove specific element");
                 console.log("- clearUI([all]) : Clear script or all UI");
                 console.log("- injectCSS(css) : Add global document styles");
