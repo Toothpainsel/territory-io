@@ -1200,6 +1200,18 @@ tory setupMap() {      // Function definition
                                     <code class="text-cyan-400 block mb-1">when(pred, fn)</code>
                                     <span class="text-[10px] text-slate-500 uppercase">Conditional Run</span>
                                 </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">gamestate</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">State Access</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">renderTile(x, y)</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Single Tile Draw</span>
+                                </div>
+                                <div class="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                                    <code class="text-cyan-400 block mb-1">renderAll()</code>
+                                    <span class="text-[10px] text-slate-500 uppercase">Full Redraw</span>
+                                </div>
                             </div>
 
                             <div class="bg-blue-500/5 p-4 rounded-2xl border border-blue-500/20">
@@ -2900,6 +2912,10 @@ toggleExplorer();` },
                 { pattern: /\bupdate\s*\(\)/g, replacement: 'update()' },
                 { pattern: /\boverwrite\s*\(/g, replacement: 'overwrite(' },
                 { pattern: /\bwhen\s*\(/g, replacement: 'when(' },
+                { pattern: /\bgamestate\b/g, replacement: 'state' },
+                { pattern: /\brenderTile\s*\(/g, replacement: 'render.tile(' },
+                { pattern: /\brenderRegion\s*\(/g, replacement: 'render.region(' },
+                { pattern: /\brenderAll\s*\(\)/g, replacement: 'render.all()' },
                 { pattern: /\bimage\s*\(/g, replacement: 'createImage(' },
                 { pattern: /\bgif\s*\(/g, replacement: 'createGif(' },
                 { pattern: /\baudio\s*\(/g, replacement: 'createAudio(' },
@@ -3372,7 +3388,14 @@ toggleExplorer();` },
                 MAP_WIDTH: CONFIG.COLS,
                 MAP_HEIGHT: CONFIG.ROWS,
                 VERSION: state.version,
-                engine: state.engine
+                engine: state.engine,
+                // --- Core Game API ---
+                state: state,
+                render: {
+                    tile: (x, y) => drawTile(x, y),
+                    region: (x1, y1, x2, y2) => drawRegion(x1, y1, x2, y2),
+                    all: () => drawRegion(0, 0, CONFIG.COLS - 1, CONFIG.ROWS - 1)
+                }
             }),
             stop: (scriptId) => {
                 state.hooks.onTick.delete(scriptId);
@@ -3446,6 +3469,10 @@ toggleExplorer();` },
                 console.log("- update() : Force refresh all UI components");
                 console.log("- overwrite(name, fn) : Overwrite global game functions");
                 console.log("- when(pred, fn) : Run fn when pred() is true");
+                console.log("- gamestate : Access the global game state object");
+                console.log("- renderTile(x, y) : Re-draw a specific tile");
+                console.log("- renderRegion(x1, y1, x2, y2) : Re-draw a region");
+                console.log("- renderAll() : Full map re-draw");
                 console.log("- fill(x, y, w, h, type) : Fill area (water/land)");
                 console.log("- claim([{x, y}, ...], ownerIdx) : Batch claim tiles");
                 console.log("- player('balance', 5000) : Set player balance");
