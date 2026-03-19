@@ -853,6 +853,82 @@ cycle(tory() {
             if (tab === 'explorer') updateEngineExplorer();
         }
 
+        function toggleEngineFullscreen() {
+            const engine = document.getElementById('sandbox-engine');
+            if (!document.fullscreenElement) {
+                engine.requestFullscreen().catch(err => {
+                    notify(`Error enabling fullscreen: ${err.message}`, "error");
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function updateEngineExplorer() {
+            const grid = document.getElementById('explorer-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            
+            const getAllFiles = (node, list = []) => {
+                if (node.type !== 'folder') list.push(node);
+                if (node.children) node.children.forEach(c => getAllFiles(c, list));
+                return list;
+            };
+            
+            const allFiles = getAllFiles(state.engine.vfs.root);
+            allFiles.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer group';
+                const isMap = f.name.endsWith('.json');
+                div.innerHTML = `
+                    <div class="text-3xl">${isMap ? '🗺️' : '📜'}</div>
+                    <span class="text-[10px] font-bold text-white truncate w-full text-center">${f.name}</span>
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.id}')` : `vfsOpenFile('${f.id}'); setEngineTab('toryscript')`}">Open</button>
+                        <button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); vfsDeleteNode('${f.id}')">Del</button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function playCustomMap(fileId) {
+            const file = vfsGetNodeById(fileId);
+            if (!file) return;
+            // Simplified applyMapDataToGame for standalone
+            const data = JSON.parse(file.content);
+            state.engine.mapData.tileTypes.set(new Uint8Array(data.tileTypes));
+            state.engine.mapData.capitalIdx = data.capitalIdx;
+            drawEngineMap();
+            notify(`Loaded map: ${data.name}`, 'success');
+        }
+
+        function stopActiveScript() {
+            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (!file) return;
+            state.activeScripts.delete(file.id);
+            const consoleEl = document.getElementById('tory-console');
+            consoleEl.innerHTML += `<br><span class="text-amber-500">> Script stopped: ${file.name}</span>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function renderConfigEditor(content) {
+            const container = document.getElementById('config-editor');
+            container.innerHTML = '';
+            let data = {};
+            try { data = JSON.parse(content || '{}'); } catch (e) { data = { error: "Invalid JSON" }; }
+            const table = document.createElement('table');
+            table.className = 'w-full text-left border-collapse';
+            table.innerHTML = `<thead><tr class="border-b border-slate-800"><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Key</th><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Value</th></tr></thead><tbody id="config-table-body"></tbody>`;
+            const tbody = table.querySelector('#config-table-body');
+            Object.entries(data).forEach(([key, val]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="py-3 pr-4"><input type="text" value="${key}" class="bg-transparent text-blue-400 font-mono text-xs w-full outline-none"></td><td class="py-3"><input type="text" value="${val}" class="bg-transparent text-slate-300 font-mono text-xs w-full outline-none"></td>`;
+                tbody.appendChild(tr);
+            });
+            container.appendChild(table);
+        }
+
         // --- VFS Core ---
         function vfsGetNodeById(id, root = state.engine.vfs.root) {
             if (root.id === id) return root;
