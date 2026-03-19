@@ -1447,20 +1447,68 @@ cycle(tory() {
                             <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Modes & Controls</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-cyan-500/20 transition-all">
                                 <div class="text-2xl mb-2">🖌️</div>
-                                <h5 class="text-white font-bold text-xs uppercase">Paint Mode</h5>
+                                <h5 class="text-white font-bold text-xs uppercase">Paint Mode [1]</h5>
                                 <p class="text-slate-500 text-[10px] mt-2">Default mode. Click or drag to claim land and expand your borders.</p>
                             </div>
-                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-amber-500/20 transition-all">
                                 <div class="text-2xl mb-2">🏢</div>
-                                <h5 class="text-white font-bold text-xs uppercase">Build Mode</h5>
+                                <h5 class="text-white font-bold text-xs uppercase">Build Mode [2]</h5>
                                 <p class="text-slate-500 text-[10px] mt-2">Enter build mode to place new cities on your territory for $1000 each.</p>
                             </div>
-                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-purple-500/20 transition-all">
+                                <div class="text-2xl mb-2">✈️</div>
+                                <h5 class="text-white font-bold text-xs uppercase">Transport [3]</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Special mode for overseas expansion and troop deployment.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-blue-500/20 transition-all">
                                 <div class="text-2xl mb-2">🔍</div>
-                                <h5 class="text-white font-bold text-xs uppercase">Pan/Zoom</h5>
-                                <p class="text-slate-500 text-[10px] mt-2">Use mouse wheel or touch gestures to navigate the high-res map.</p>
+                                <h5 class="text-white font-bold text-xs uppercase">Pan/Zoom [4]</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Navigate the map without accidentally claiming tiles.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-red-500/20 transition-all">
+                                <div class="text-2xl mb-2">🚀</div>
+                                <h5 class="text-white font-bold text-xs uppercase">War Missile [5]</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Unlocked via research. Launch long-range strikes during active wars.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5 hover:border-emerald-500/20 transition-all">
+                                <div class="text-2xl mb-2">🤝</div>
+                                <h5 class="text-white font-bold text-xs uppercase">Shared Modes [6-8]</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Special modes for helping allies and teammates build or paint.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Interface & Menu Guide -->
+                    <section class="space-y-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center text-2xl">🖥️</div>
+                            <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Interface & Menus</h3>
+                        </div>
+                        <div class="bg-slate-800/30 p-10 rounded-[40px] border border-white/5 space-y-10">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div class="space-y-4">
+                                    <h4 class="text-blue-400 font-bold uppercase tracking-widest text-xs">Top Status Bar</h4>
+                                    <ul class="text-slate-400 text-sm space-y-3">
+                                        <li class="flex gap-3"><b class="text-white">Treasury:</b> Tracks your current balance and Max Balance capacity.</li>
+                                        <li class="flex gap-3"><b class="text-white">Cycle Timer:</b> Visual progress toward the next 10s economic pulse.</li>
+                                        <li class="flex gap-3"><b class="text-white">Notifications:</b> Live feed of world events (Wars, Alliances, Betrayals).</li>
+                                    </ul>
+                                </div>
+                                <div class="space-y-4">
+                                    <h4 class="text-emerald-400 font-bold uppercase tracking-widest text-xs">Side Command Panel</h4>
+                                    <ul class="text-slate-400 text-sm space-y-3">
+                                        <li class="flex gap-3"><span class="text-blue-400">🔵</span> <b>Research:</b> Upgrade tech trees and unlock new units.</li>
+                                        <li class="flex gap-3"><span class="text-purple-400">🟣</span> <b>Ranking:</b> Detailed global statistics and power comparisons.</li>
+                                        <li class="flex gap-3"><span class="text-emerald-400">🟢</span> <b>Management:</b> Bulk city tools and strategic investments.</li>
+                                        <li class="flex gap-3"><span class="text-slate-400">⚪</span> <b>Event Feed:</b> Historical log of all major gameplay events.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="border-t border-white/5 pt-8">
+                                <h4 class="text-amber-400 font-bold uppercase tracking-widest text-xs mb-4">The Donut Menu</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Click any city you own to trigger the <b>Donut Menu</b>. This contextual UI allows you to quickly develop city levels (hj) or fortify positions without leaving the map view.</p>
                             </div>
                         </div>
                     </section>
