@@ -1,0 +1,16 @@
+{
+  "name": "Territory.io",
+  "short_name": "Territory",
+  "description": "A deep-strategy territory expansion game.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "assets/rocket.gif",
+      "sizes": "192x192",
+      "type": "image/gif"
+    }
+  ]
+}
