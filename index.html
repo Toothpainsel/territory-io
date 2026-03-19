@@ -781,7 +781,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <h2 class="text-xl font-black text-amber-400 italic uppercase tracking-tight">ToryEngine Studio</h2>
-                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.1.0</span>
+                    <span class="px-2 py-0.5 rounded-md border border-amber-400/30 bg-amber-500/10 text-[9px] font-bold text-amber-300 uppercase tracking-widest">v3.2.0</span>
                 </div>
                 <div class="h-6 w-[1px] bg-slate-800"></div>
                 <div class="flex gap-2">
@@ -863,7 +863,7 @@
                         <!-- Table will be injected here -->
                     </div>
                     <div id="tory-console" class="h-32 bg-black border-t border-slate-800 p-4 font-mono text-[10px] text-emerald-500 overflow-y-auto">
-                        > ToryScript Engine v2.6.0 Initialized.
+                        > ToryScript Engine v2.7.0 Initialized.
                     </div>
                 </div>
             </div>
@@ -959,6 +959,14 @@ tory setupMap() {      // Function definition
                                 <div>
                                     <h4 class="text-white font-bold text-sm mb-2">claim(coords, owner)</h4>
                                     <p class="text-slate-400 text-xs italic">Batch claim territory via [{x,y}, ...].</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">wait(ms)</h4>
+                                    <p class="text-slate-400 text-xs italic">Pause script execution for specified milliseconds.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">stop()</h4>
+                                    <p class="text-slate-400 text-xs italic">Immediately terminate the current script session.</p>
                                 </div>
                             </div>
                         </div>
@@ -1422,7 +1430,7 @@ cycle(tory() {
         };
 
         const state = {
-            version: '3.1.0', // Current version tag (Multimedia & Map Editor)
+            version: '3.2.0', // Current version tag (Multimedia & Map Editor)
             username: '',
             playerId: 'pr' + Math.floor(Math.random() * 90 + 10), // Unique 2-digit ID
             initialized: false, // Prevent multiple initializations
