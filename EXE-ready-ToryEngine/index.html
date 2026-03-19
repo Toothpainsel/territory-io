@@ -612,7 +612,7 @@ cycle(tory() {
     </div>
 
     <script>
-        const CONFIG = {
+        var CONFIG = {
             TILE_SIZE: 10,
             COLS: 384,
             ROWS: 216,
@@ -622,13 +622,13 @@ cycle(tory() {
             CITY_BUILD_TIME: 20000,
             CAPITAL_BONUS: 5,
             CITY_BONUS: 1,
-            CITY_MAX_BONUS: 0.05, // 5% bonus per city
+            CITY_MAX_BONUS: 0.05,
             DAM_BONUS: 10,
             MAX_DAMS: 100,
             TRANSPORT_COST: 500,
             MIN_CITY_DISTANCE: 5,
             STARTING_SIZE: 6,
-            UPDATE_CHECK_INTERVAL: 60000, // Check every 60 seconds
+            UPDATE_CHECK_INTERVAL: 60000,
             MIN_ZOOM: 0.2,
             MAX_ZOOM: 3.0,
             ZOOM_STEP: 0.2,
@@ -637,24 +637,22 @@ cycle(tory() {
             AIR_SUPPORT_RANGE: 200
         };
 
-        const state = {
-            version: '3.2.0', // Current version tag (Multimedia & Map Editor)
+        var state = {
+            version: '3.2.0',
             username: 'Architect',
             playerId: 'studio-user',
             initialized: false,
-            
             tileTypes: new Uint8Array(384 * 216),
             tileOwners: new Uint8Array(384 * 216),
             cityLevels: new Uint8Array(384 * 216),
             cityPopulations: new Uint32Array(384 * 216),
             tileFlags: new Uint8Array(384 * 216),
-            
             entities: [
                 { id: 'WILD', type: 'wild', color: '#0f172a' },
                 { id: 'STUDIO', type: 'player', color: '#3b82f6', name: 'Studio', balance: Infinity, ownedCount: 0, cityCount: 0, capitalPos: null }
             ],
             wars: [],
-            alliances: new Set(),
+            alliances: {},
             sharedOwnership: {},
             factions: [],
             research: {
@@ -667,32 +665,22 @@ cycle(tory() {
                     political: {}
                 }
             },
-            
             investments: [],
             management: { activeTab: 'cities' },
-            
-            planning: { active: false, turns: Array.from({length: 10}, () => []), activeTurn: 0, warId: null, assaultType: 'support' },
+            planning: { active: false, turns: Array.from({length: 10}, function() { return []; }), activeTurn: 0, warId: null, assaultType: 'support' },
             events: [],
-            hooks: { onTick: new Map(), onCycle: new Map(), onWar: new Map() },
-            activeScripts: new Set(),
-            
+            hooks: { onTick: {}, onCycle: {}, onWar: {} },
+            activeScripts: {},
             engine: {
                 initialized: false,
                 ctx: null,
                 brush: 'land',
                 activeTab: 'editor',
                 isInteracting: false,
-                mapData: {
-                    name: 'New Map',
-                    tileTypes: null,
-                    cityIndices: [],
-                    capitalIdx: null
-                },
+                mapData: { name: 'New Map', tileTypes: null, cityIndices: [], capitalIdx: null },
                 vfs: {
                     root: {
-                        id: 'root',
-                        name: 'root',
-                        type: 'folder',
+                        id: 'root', name: 'root', type: 'folder',
                         children: [
                             { id: 'f1', name: 'scripts', type: 'folder', children: [
                                 { id: 's1', name: 'main.tory', type: 'script', content: '// ToryScript Studio\nprint("Engine Ready.");' }
@@ -703,13 +691,12 @@ cycle(tory() {
                             ]}
                         ]
                     },
-                    activeFileId: 's1',
-                    currentPath: '/root/scripts'
+                    activeFileId: 's1', currentPath: '/root/scripts'
                 }
             }
         };
 
-        const COLORS = {
+        var COLORS = {
             WATER: '#1e3a8a',
             LAND: '#0f172a',
             OWNED: '#3b82f6',
@@ -718,23 +705,23 @@ cycle(tory() {
             MOUNTAIN: '#1e293b'
         };
 
-        // --- Core Studio Functions ---
-        function notify(msg, type = 'info') {
-            const container = document.getElementById('notifications');
-            const n = document.createElement('div');
-            n.className = `notification ${type}`;
+        function notify(msg, type) {
+            type = type || 'info';
+            var container = document.getElementById('notifications');
+            var n = document.createElement('div');
+            n.className = "notification " + type;
             n.innerText = msg;
             container.appendChild(n);
-            setTimeout(() => { n.style.opacity = '0'; setTimeout(() => n.remove(), 300); }, 3000);
+            setTimeout(function() { n.style.opacity = '0'; setTimeout(function() { n.remove(); }, 300); }, 3000);
         }
 
         function openSandboxEngine() {
             if (!state.engine.initialized) {
-                const savedVfs = localStorage.getItem('tory_engine_vfs');
+                var savedVfs = localStorage.getItem('tory_engine_vfs');
                 if (savedVfs) {
                     try {
-                        const parsed = JSON.parse(savedVfs);
-                        if (parsed?.root && parsed?.activeFileId) state.engine.vfs = parsed;
+                        var parsed = JSON.parse(savedVfs);
+                        if (parsed && parsed.root && parsed.activeFileId) state.engine.vfs = parsed;
                     } catch (e) { console.error("Failed to load engine VFS", e); }
                 }
                 initSandboxEngine();
@@ -748,38 +735,38 @@ cycle(tory() {
         }
 
         function initSandboxEngine() {
-            const eCanvas = document.getElementById('engine-canvas');
+            var eCanvas = document.getElementById('engine-canvas');
             eCanvas.width = 3840; eCanvas.height = 2160;
-            const eCtx = eCanvas.getContext('2d', { alpha: false });
+            var eCtx = eCanvas.getContext('2d', { alpha: false });
             state.engine.ctx = eCtx;
             state.engine.mapData.tileTypes = new Uint8Array(CONFIG.COLS * CONFIG.ROWS).fill(1);
             drawEngineMap();
             
-            const handleEngineMove = (e) => {
+            function handleEngineMove(e) {
                 if (!state.engine.isInteracting) return;
-                const rect = eCanvas.getBoundingClientRect();
-                const scaleX = eCanvas.width / rect.width;
-                const scaleY = eCanvas.height / rect.height;
-                const x = Math.floor((e.clientX - rect.left) * scaleX / CONFIG.TILE_SIZE);
-                const y = Math.floor((e.clientY - rect.top) * scaleY / CONFIG.TILE_SIZE);
+                var rect = eCanvas.getBoundingClientRect();
+                var scaleX = eCanvas.width / rect.width;
+                var scaleY = eCanvas.height / rect.height;
+                var x = Math.floor((e.clientX - rect.left) * scaleX / CONFIG.TILE_SIZE);
+                var y = Math.floor((e.clientY - rect.top) * scaleY / CONFIG.TILE_SIZE);
                 if (x >= 0 && x < CONFIG.COLS && y >= 0 && y < CONFIG.ROWS) {
                     applyEngineBrush(x, y);
-                    document.getElementById('engine-coords').innerText = `X: ${x}, Y: ${y}`;
+                    document.getElementById('engine-coords').innerText = "X: " + x + ", Y: " + y;
                 }
-            };
-            eCanvas.addEventListener('mousedown', (e) => { state.engine.isInteracting = true; handleEngineMove(e); });
+            }
+            eCanvas.addEventListener('mousedown', function(e) { state.engine.isInteracting = true; handleEngineMove(e); });
             eCanvas.addEventListener('mousemove', handleEngineMove);
-            window.addEventListener('mouseup', () => state.engine.isInteracting = false);
+            window.addEventListener('mouseup', function() { state.engine.isInteracting = false; });
             state.engine.initialized = true;
         }
 
         function drawEngineMap() {
-            const eCtx = state.engine.ctx;
-            const data = state.engine.mapData.tileTypes;
-            for (let y = 0; y < CONFIG.ROWS; y++) {
-                for (let x = 0; x < CONFIG.COLS; x++) {
-                    const type = data[y * CONFIG.COLS + x];
-                    let fill = COLORS.LAND;
+            var eCtx = state.engine.ctx;
+            var data = state.engine.mapData.tileTypes;
+            for (var y = 0; y < CONFIG.ROWS; y++) {
+                for (var x = 0; x < CONFIG.COLS; x++) {
+                    var type = data[y * CONFIG.COLS + x];
+                    var fill = COLORS.LAND;
                     if (type === 0) fill = COLORS.WATER;
                     else if (type === 5) fill = COLORS.CITY;
                     else if (type === 6) fill = COLORS.CAPITAL;
@@ -793,28 +780,30 @@ cycle(tory() {
         }
 
         function updateEngineStatus() {
-            const fileEl = document.getElementById('engine-status-file');
-            const activeFile = vfsGetNodeById(state.engine.vfs.activeFileId);
-            if (fileEl) fileEl.innerText = `File: ${activeFile?.name || 'none'}`;
+            var fileEl = document.getElementById('engine-status-file');
+            var activeFile = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (fileEl) fileEl.innerText = "File: " + (activeFile ? activeFile.name : "none");
         }
 
         function setEngineBrush(type) {
             state.engine.brush = type;
-            ['water', 'land', 'city', 'capital'].forEach(b => {
-                const btn = document.getElementById(`brush-${b}`);
+            var buttons = ['water', 'land', 'city', 'capital'];
+            for (var i = 0; i < buttons.length; i++) {
+                var b = buttons[i];
+                var btn = document.getElementById('brush-' + b);
                 if (btn) btn.className = b === type ? 'px-3 h-8 rounded border border-blue-400 bg-blue-600/20 text-blue-300 text-[10px] font-bold uppercase' : 'px-3 h-8 rounded border border-slate-700 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase';
-            });
+            }
         }
 
         function applyEngineBrush(x, y) {
-            const size = parseInt(document.getElementById('engine-brush-size').value);
-            const typeMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6 };
-            const type = typeMap[state.engine.brush];
-            for (let i = -size + 1; i < size; i++) {
-                for (let j = -size + 1; j < size; j++) {
-                    const tx = x + i, ty = y + j;
+            var size = parseInt(document.getElementById('engine-brush-size').value);
+            var typeMap = { 'water': 0, 'land': 1, 'city': 5, 'capital': 6 };
+            var type = typeMap[state.engine.brush];
+            for (var i = -size + 1; i < size; i++) {
+                for (var j = -size + 1; j < size; j++) {
+                    var tx = x + i, ty = y + j;
                     if (tx >= 0 && tx < CONFIG.COLS && ty >= 0 && ty < CONFIG.ROWS) {
-                        const idx = ty * CONFIG.COLS + tx;
+                        var idx = ty * CONFIG.COLS + tx;
                         state.engine.mapData.tileTypes[idx] = type;
                         if (type === 6) {
                             if (state.engine.mapData.capitalIdx !== null) {
@@ -830,9 +819,9 @@ cycle(tory() {
         }
 
         function drawEngineTile(x, y) {
-            const eCtx = state.engine.ctx;
-            const type = state.engine.mapData.tileTypes[y * CONFIG.COLS + x];
-            let fill = COLORS.LAND;
+            var eCtx = state.engine.ctx;
+            var type = state.engine.mapData.tileTypes[y * CONFIG.COLS + x];
+            var fill = COLORS.LAND;
             if (type === 0) fill = COLORS.WATER;
             else if (type === 5) fill = COLORS.CITY;
             else if (type === 6) fill = COLORS.CAPITAL;
@@ -844,20 +833,22 @@ cycle(tory() {
 
         function setEngineTab(tab) {
             state.engine.activeTab = tab;
-            ['editor', 'toryscript', 'docs', 'explorer', 'templates', 'download'].forEach(t => {
-                const btn = document.getElementById(`tab-engine-${t}`);
-                const panel = document.getElementById(`engine-content-${t}`);
+            var tabs = ['editor', 'toryscript', 'docs', 'explorer', 'templates', 'download'];
+            for (var i = 0; i < tabs.length; i++) {
+                var t = tabs[i];
+                var btn = document.getElementById('tab-engine-' + t);
+                var panel = document.getElementById('engine-content-' + t);
                 if (btn) btn.className = t === tab ? 'px-4 py-1.5 rounded-lg border border-blue-500/40 bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-wide' : 'px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide';
                 if (panel) panel.classList.toggle('hidden', t !== tab);
-            });
+            }
             if (tab === 'explorer') updateEngineExplorer();
         }
 
         function toggleEngineFullscreen() {
-            const engine = document.getElementById('sandbox-engine');
+            var engine = document.getElementById('sandbox-engine');
             if (!document.fullscreenElement) {
-                engine.requestFullscreen().catch(err => {
-                    notify(`Error enabling fullscreen: ${err.message}`, "error");
+                engine.requestFullscreen().catch(function(err) {
+                    notify("Error enabling fullscreen: " + err.message, "error");
                 });
             } else {
                 document.exitFullscreen();
@@ -865,131 +856,199 @@ cycle(tory() {
         }
 
         function updateEngineExplorer() {
-            const grid = document.getElementById('explorer-grid');
+            var grid = document.getElementById('explorer-grid');
             if (!grid) return;
             grid.innerHTML = '';
             
-            const getAllFiles = (node, list = []) => {
+            function getAllFiles(node, list) {
+                list = list || [];
                 if (node.type !== 'folder') list.push(node);
-                if (node.children) node.children.forEach(c => getAllFiles(c, list));
+                if (node.children) {
+                    for (var i = 0; i < node.children.length; i++) {
+                        getAllFiles(node.children[i], list);
+                    }
+                }
                 return list;
-            };
+            }
             
-            const allFiles = getAllFiles(state.engine.vfs.root);
-            allFiles.forEach(f => {
-                const div = document.createElement('div');
+            var allFiles = getAllFiles(state.engine.vfs.root);
+            for (var i = 0; i < allFiles.length; i++) {
+                var f = allFiles[i];
+                var div = document.createElement('div');
                 div.className = 'bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col items-center gap-3 hover:bg-slate-800 transition-colors cursor-pointer group';
-                const isMap = f.name.endsWith('.json');
-                div.innerHTML = `
-                    <div class="text-3xl">${isMap ? '🗺️' : '📜'}</div>
-                    <span class="text-[10px] font-bold text-white truncate w-full text-center">${f.name}</span>
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ${isMap ? `playCustomMap('${f.id}')` : `vfsOpenFile('${f.id}'); setEngineTab('toryscript')`}">Open</button>
-                        <button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); vfsDeleteNode('${f.id}')">Del</button>
-                    </div>
-                `;
+                var isMap = f.name.indexOf('.json') !== -1;
+                div.innerHTML = '<div class="text-3xl">' + (isMap ? "🗺️" : "📜") + '</div>' +
+                    '<span class="text-[10px] font-bold text-white truncate w-full text-center">' + f.name + '</span>' +
+                    '<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">' +
+                        '<button class="text-[8px] text-blue-400 font-bold uppercase" onclick="event.stopPropagation(); ' + (isMap ? "playCustomMap('" + f.id + "')" : "vfsOpenFile('" + f.id + "'); setEngineTab('toryscript')") + '">Open</button>' +
+                        '<button class="text-[8px] text-red-400 font-bold uppercase" onclick="event.stopPropagation(); vfsDeleteNode(\'' + f.id + '\')">Del</button>' +
+                    '</div>';
                 grid.appendChild(div);
-            });
+            }
         }
 
         function playCustomMap(fileId) {
-            const file = vfsGetNodeById(fileId);
+            var file = vfsGetNodeById(fileId);
             if (!file) return;
-            // Simplified applyMapDataToGame for standalone
-            const data = JSON.parse(file.content);
+            var data = JSON.parse(file.content);
             state.engine.mapData.tileTypes.set(new Uint8Array(data.tileTypes));
             state.engine.mapData.capitalIdx = data.capitalIdx;
             drawEngineMap();
-            notify(`Loaded map: ${data.name}`, 'success');
+            notify("Loaded map: " + data.name, 'success');
         }
 
         function stopActiveScript() {
-            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            var file = vfsGetNodeById(state.engine.vfs.activeFileId);
             if (!file) return;
-            state.activeScripts.delete(file.id);
-            const consoleEl = document.getElementById('tory-console');
-            consoleEl.innerHTML += `<br><span class="text-amber-500">> Script stopped: ${file.name}</span>`;
+            delete state.activeScripts[file.id];
+            var consoleEl = document.getElementById('tory-console');
+            consoleEl.innerHTML += "<br><span class=\"text-amber-500\">> Script stopped: " + file.name + "</span>";
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
         function renderConfigEditor(content) {
-            const container = document.getElementById('config-editor');
+            var container = document.getElementById('config-editor');
             container.innerHTML = '';
-            let data = {};
+            var data = {};
             try { data = JSON.parse(content || '{}'); } catch (e) { data = { error: "Invalid JSON" }; }
-            const table = document.createElement('table');
+            var table = document.createElement('table');
             table.className = 'w-full text-left border-collapse';
-            table.innerHTML = `<thead><tr class="border-b border-slate-800"><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Key</th><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Value</th></tr></thead><tbody id="config-table-body"></tbody>`;
-            const tbody = table.querySelector('#config-table-body');
-            Object.entries(data).forEach(([key, val]) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="py-3 pr-4"><input type="text" value="${key}" class="bg-transparent text-blue-400 font-mono text-xs w-full outline-none"></td><td class="py-3"><input type="text" value="${val}" class="bg-transparent text-slate-300 font-mono text-xs w-full outline-none"></td>`;
+            table.innerHTML = '<thead><tr class="border-b border-slate-800"><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Key</th><th class="py-2 text-[10px] text-slate-500 uppercase font-bold">Value</th></tr></thead><tbody id="config-table-body"></tbody>';
+            var tbody = table.querySelector('#config-table-body');
+            var entries = Object.entries ? Object.entries(data) : []; // Fallback for very old engines
+            for (var i = 0; i < entries.length; i++) {
+                var key = entries[i][0];
+                var val = entries[i][1];
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td class="py-3 pr-4"><input type="text" value="' + key + '" class="bg-transparent text-blue-400 font-mono text-xs w-full outline-none"></td><td class="py-3"><input type="text" value="' + val + '" class="bg-transparent text-slate-300 font-mono text-xs w-full outline-none"></td>';
                 tbody.appendChild(tr);
-            });
+            }
             container.appendChild(table);
         }
 
-        // --- VFS Core ---
-        function vfsGetNodeById(id, root = state.engine.vfs.root) {
+        function vfsGetNodeById(id, root) {
+            root = root || state.engine.vfs.root;
             if (root.id === id) return root;
-            if (root.children) { for (let child of root.children) { const found = vfsGetNodeById(id, child); if (found) return found; } }
+            if (root.children) { for (var i = 0; i < root.children.length; i++) { var found = vfsGetNodeById(id, root.children[i]); if (found) return found; } }
             return null;
         }
-        function vfsGetParentNode(id, root = state.engine.vfs.root) {
-            if (root.children) { if (root.children.some(c => c.id === id)) return root; for (let child of root.children) { const parent = vfsGetParentNode(id, child); if (parent) return parent; } }
+        function vfsGetParentNode(id, root) {
+            root = root || state.engine.vfs.root;
+            if (root.children) {
+                for (var i = 0; i < root.children.length; i++) { if (root.children[i].id === id) return root; }
+                for (var j = 0; j < root.children.length; j++) { var parent = vfsGetParentNode(id, root.children[j]); if (parent) return parent; }
+            }
             return null;
         }
         function vfsGetPath(id) {
-            const node = vfsGetNodeById(id); if (!node) return ''; if (node.id === 'root') return '/root';
-            const parent = vfsGetParentNode(id); if (!parent) return '/' + node.name;
+            var node = vfsGetNodeById(id); if (!node) return ''; if (node.id === 'root') return '/root';
+            var parent = vfsGetParentNode(id); if (!parent) return '/' + node.name;
             return vfsGetPath(parent.id) + '/' + node.name;
         }
         function updateVFSTree() {
-            const treeEl = document.getElementById('vfs-tree'); if (!treeEl) return; treeEl.innerHTML = '';
-            const renderNode = (node, depth = 0) => {
-                const div = document.createElement('div');
-                div.className = `flex items-center gap-2 p-1 rounded hover:bg-slate-800 cursor-pointer group transition-colors`;
-                div.style.paddingLeft = `${depth * 12 + 4}px`;
-                const isFolder = node.type === 'folder';
-                const icon = isFolder ? '📁' : (node.name.endsWith('.json') ? '🗺️' : '📜');
-                const isActive = state.engine.vfs.activeFileId === node.id;
-                div.innerHTML = `<span class="text-xs">${icon}</span><span class="text-[10px] font-mono ${isActive ? 'text-blue-400 font-bold' : 'text-slate-400'}">${node.name}</span>`;
-                div.onclick = () => { if (isFolder) state.engine.vfs.currentPath = vfsGetPath(node.id); else vfsOpenFile(node.id); };
+            var treeEl = document.getElementById('vfs-tree'); if (!treeEl) return; treeEl.innerHTML = '';
+            function renderNode(node, depth) {
+                depth = depth || 0;
+                var div = document.createElement('div');
+                div.className = "flex items-center gap-2 p-1 rounded hover:bg-slate-800 cursor-pointer group transition-colors";
+                div.style.paddingLeft = (depth * 12 + 4) + "px";
+                var isFolder = node.type === 'folder';
+                var icon = isFolder ? '📁' : (node.name.indexOf('.json') !== -1 ? '🗺️' : '📜');
+                var isActive = state.engine.vfs.activeFileId === node.id;
+                div.innerHTML = '<span class="text-xs">' + icon + '</span><span class="text-[10px] font-mono ' + (isActive ? 'text-blue-400 font-bold' : 'text-slate-400') + '">' + node.name + '</span>';
+                div.onclick = function() { if (isFolder) state.engine.vfs.currentPath = vfsGetPath(node.id); else vfsOpenFile(node.id); };
                 treeEl.appendChild(div);
-                if (node.children) node.children.sort((a, b) => (b.type === 'folder') - (a.type === 'folder') || a.name.localeCompare(b.name)).forEach(child => renderNode(child, depth + 1));
-            };
+                if (node.children) {
+                    var sorted = node.children.slice().sort(function(a, b) { return (b.type === 'folder') - (a.type === 'folder') || a.name.localeCompare(b.name); });
+                    for (var i = 0; i < sorted.length; i++) { renderNode(sorted[i], depth + 1); }
+                }
+            }
             renderNode(state.engine.vfs.root);
         }
         function vfsOpenFile(id) {
-            const file = vfsGetNodeById(id); if (!file || file.type === 'folder') return;
+            var file = vfsGetNodeById(id); if (!file || file.type === 'folder') return;
             if (state.engine.vfs.activeFileId) {
-                const currentFile = vfsGetNodeById(state.engine.vfs.activeFileId);
-                if (currentFile && !currentFile.name.endsWith('.toryconfig')) currentFile.content = document.getElementById('tory-editor').value;
+                var currentFile = vfsGetNodeById(state.engine.vfs.activeFileId);
+                if (currentFile && currentFile.name.indexOf('.toryconfig') === -1) currentFile.content = document.getElementById('tory-editor').value;
             }
             state.engine.vfs.activeFileId = id; loadActiveFile(); updateVFSTree();
         }
         function loadActiveFile() {
-            const file = vfsGetNodeById(state.engine.vfs.activeFileId); if (!file) return;
-            const editor = document.getElementById('tory-editor'); const configEditor = document.getElementById('config-editor');
-            const pathEl = document.getElementById('active-file-path'); const idEl = document.getElementById('active-file-id');
-            pathEl.innerText = vfsGetPath(file.id); idEl.innerText = `ID: ${file.id}`;
-            const isConfig = file.name.endsWith('.toryconfig');
+            var file = vfsGetNodeById(state.engine.vfs.activeFileId); if (!file) return;
+            var editor = document.getElementById('tory-editor'); var configEditor = document.getElementById('config-editor');
+            var pathEl = document.getElementById('active-file-path'); var idEl = document.getElementById('active-file-id');
+            pathEl.innerText = vfsGetPath(file.id); idEl.innerText = "ID: " + file.id;
+            var isConfig = file.name.indexOf('.toryconfig') !== -1;
             if (isConfig) { editor.classList.add('hidden'); configEditor.classList.remove('hidden'); renderConfigEditor(file.content); }
             else { configEditor.classList.add('hidden'); editor.classList.remove('hidden'); editor.value = file.content || ''; }
             updateEngineStatus();
         }
-        function saveActiveFile() {
-            const file = vfsGetNodeById(state.engine.vfs.activeFileId);
-            if (file) { file.content = document.getElementById('tory-editor').value; localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs)); notify(`Saved ${file.name}`, 'success'); }
+        function saveConfigEditor() {
+            var tbody = document.getElementById('config-table-body');
+            var rows = tbody.querySelectorAll('tr');
+            var data = {};
+            for (var i = 0; i < rows.length; i++) {
+                var inputs = rows[i].querySelectorAll('input');
+                if (inputs.length >= 2) {
+                    var key = inputs[0].value.trim();
+                    var val = inputs[1].value.trim();
+                    if (key) {
+                        var parsedVal = val;
+                        if (val === 'true') parsedVal = true;
+                        else if (val === 'false') parsedVal = false;
+                        else if (!isNaN(val) && val !== '') parsedVal = parseFloat(val);
+                        data[key] = parsedVal;
+                    }
+                }
+            }
+            var file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (file) { file.content = JSON.stringify(data, null, 2); localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs)); }
+        }
+        function saveActiveFile(showNotify) {
+            showNotify = showNotify === undefined ? true : showNotify;
+            var file = vfsGetNodeById(state.engine.vfs.activeFileId);
+            if (file) {
+                if (file.name.indexOf('.toryconfig') !== -1) saveConfigEditor();
+                else file.content = document.getElementById('tory-editor').value;
+                localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+                if (showNotify) notify("Saved " + file.name, 'success');
+                updateEngineStatus();
+            }
+        }
+        function vfsCreateFile() {
+            var name = prompt("Enter filename:", "new_script.tory");
+            if (!name) return;
+            var newNode = { id: 'node_' + Math.random().toString(36).substr(2, 9), name: name, type: name.indexOf('.json') !== -1 ? 'map' : 'script', content: '' };
+            state.engine.vfs.root.children.push(newNode);
+            vfsOpenFile(newNode.id);
+            localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+        }
+        function vfsCreateFolder() {
+            var name = prompt("Enter folder name:", "new_folder");
+            if (!name) return;
+            var newNode = { id: 'folder_' + Math.random().toString(36).substr(2, 9), name: name, type: 'folder', children: [] };
+            state.engine.vfs.root.children.push(newNode);
+            updateVFSTree();
+            localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+        }
+        function vfsDeleteNode(id) {
+            if (id === 'root') return;
+            if (!confirm("Delete this item?")) return;
+            var parent = vfsGetParentNode(id);
+            if (parent) {
+                parent.children = parent.children.filter(function(c) { return c.id !== id; });
+                if (state.engine.vfs.activeFileId === id) { state.engine.vfs.activeFileId = 's1'; loadActiveFile(); }
+                updateVFSTree();
+                localStorage.setItem('tory_engine_vfs', JSON.stringify(state.engine.vfs));
+            }
         }
 
-        // --- ToryScript ---
         function compileToryScript(code) {
-            let compiled = code;
-            const mapping = [
+            var compiled = code;
+            var mapping = [
                 { pattern: /\btory\s+([a-zA-Z0-9_$]+)\s*\(/g, replacement: 'function $1(' },
                 { pattern: /\btory\s*\(/g, replacement: 'function(' },
-                { pattern: /\btory\b/g, replacement: 'let' },
+                { pattern: /\btory\b/g, replacement: 'var' },
                 { pattern: /\bwait\s*\(/g, replacement: 'await wait(' },
                 { pattern: /\bpaint\s*\(/g, replacement: 'fill(' },
                 { pattern: /\brect\s*\(/g, replacement: 'fill(' },
@@ -1001,77 +1060,90 @@ cycle(tory() {
                 { pattern: /\bprint\s*\(/g, replacement: 'log(' },
                 { pattern: /\bline\s*\(/g, replacement: 'drawLine(' }
             ];
-            mapping.forEach(m => compiled = compiled.replace(m.pattern, m.replacement));
+            for (var i = 0; i < mapping.length; i++) { compiled = compiled.replace(mapping[i].pattern, mapping[i].replacement); }
             return compiled;
         }
-        const ToryScript = {
-            api: (scriptId, customLog) => ({
-                wait: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
-                fill: (x, y, w, h, type) => {
-                    const t = type === 'water' ? 0 : 1;
-                    for (let i = y; i < y + h; i++) { for (let j = x; j < x + w; j++) { if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) state.engine.mapData.tileTypes[i * CONFIG.COLS + j] = t; } }
-                },
-                log: (msg) => { if (customLog) customLog(msg); else console.log(`[ToryScript] ${msg}`); },
-                clear: () => state.engine.mapData.tileTypes.fill(1)
-            }),
-            run: async (code, options = {}) => {
-                const scriptId = options.id || `script-${Date.now()}`;
-                const compiled = compileToryScript(code);
-                const api = ToryScript.api(scriptId, options.onLog);
+        var ToryScript = {
+            api: function(scriptId, customLog) {
+                return {
+                    wait: function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); },
+                    fill: function(x, y, w, h, type) {
+                        var t = type === 'water' ? 0 : 1;
+                        var target = state.engine.mapData.tileTypes;
+                        for (var i = y; i < y + h; i++) { for (var j = x; j < x + w; j++) { if (j >= 0 && j < CONFIG.COLS && i >= 0 && i < CONFIG.ROWS) target[i * CONFIG.COLS + j] = t; } }
+                    },
+                    log: function(msg) { if (customLog) customLog(msg); else console.log("[ToryScript] " + msg); },
+                    clear: function() { state.engine.mapData.tileTypes.fill(1); }
+                };
+            },
+            run: function(code, options) {
+                var scriptId = options.id || "script-" + Date.now();
+                var compiled = compileToryScript(code);
+                var api = ToryScript.api(scriptId, options.onLog);
+                state.activeScripts[scriptId] = true;
                 try {
-                    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-                    const scriptFunc = new AsyncFunction(...Object.keys(api), compiled);
-                    await scriptFunc(...Object.values(api));
-                    drawEngineMap();
-                    return { success: true, id: scriptId };
-                } catch (e) { return { success: false, error: e.message }; }
+                    // Traditional Promise-based execution for compatibility
+                    var scriptFunc = new Function('api', 'with(api) { return (async function() { ' + compiled + ' })(); }');
+                    return scriptFunc(api).then(function() { drawEngineMap(); return { success: true, id: scriptId }; })
+                        .catch(function(err) { return { success: false, error: err.message }; });
+                } catch (e) { return Promise.resolve({ success: false, error: e.message }); }
             }
         };
 
-        async function runToryScript() {
-            const originalCode = document.getElementById('tory-editor').value;
-            const consoleEl = document.getElementById('tory-console');
-            consoleEl.innerHTML += `<br>> Executing Script...`;
-            const result = await ToryScript.run(originalCode, { onLog: (msg) => { consoleEl.innerHTML += `<br>> ${msg}`; consoleEl.scrollTop = consoleEl.scrollHeight; } });
-            if (result.success) consoleEl.innerHTML += `<br>> ToryScript: Success.`;
-            else consoleEl.innerHTML += `<br><span class="text-red-500">> Error: ${result.error}</span>`;
-            consoleEl.scrollTop = consoleEl.scrollHeight;
+        function runToryScript() {
+            var originalCode = document.getElementById('tory-editor').value;
+            var consoleEl = document.getElementById('tory-console');
+            consoleEl.innerHTML += "<br>> Executing Script...";
+            ToryScript.run(originalCode, { onLog: function(msg) { consoleEl.innerHTML += "<br>> " + msg; consoleEl.scrollTop = consoleEl.scrollHeight; } })
+                .then(function(result) {
+                    if (result.success) consoleEl.innerHTML += "<br>> ToryScript: Success.";
+                    else consoleEl.innerHTML += "<br><span class=\"text-red-500\">> Error: " + result.error + "</span>";
+                    consoleEl.scrollTop = consoleEl.scrollHeight;
+                });
         }
 
-        // --- Build Logic ---
         function showBuildModal(target) {
-            const modal = document.getElementById('build-modal');
+            var modal = document.getElementById('build-modal');
             modal.classList.remove('hidden');
-            ['analyze', 'compile', 'package', 'sign'].forEach(s => document.getElementById(`step-${s}`).className = 'build-step');
+            var steps = ['analyze', 'compile', 'package', 'sign'];
+            for (var i = 0; i < steps.length; i++) { document.getElementById('step-' + steps[i]).className = 'build-step'; }
             document.getElementById('build-progress-fill').style.width = '0%';
             document.getElementById('build-complete-msg').classList.add('hidden');
         }
         function closeBuildModal() { document.getElementById('build-modal').classList.add('hidden'); }
-        async function exportProjectBundle(target) {
-            const baseTarget = target.split('-')[0];
+        function exportProjectBundle(target) {
+            var baseTarget = target.split('-')[0];
             showBuildModal(baseTarget);
-            const steps = [
+            var steps = [
                 { id: 'analyze', msg: 'Verifying Compatibility...', progress: 25 },
                 { id: 'compile', msg: 'Compiling IDE Core...', progress: 50 },
                 { id: 'package', msg: 'Packaging Native Container...', progress: 75 },
                 { id: 'sign', msg: 'Signing Application Binary...', progress: 100 }
             ];
-            for (const step of steps) {
-                document.getElementById(`step-${step.id}`).classList.add('active');
-                document.getElementById('build-status').innerText = step.msg;
-                await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
-                document.getElementById(`step-${step.id}`).classList.replace('active', 'completed');
-                document.getElementById('build-progress-fill').style.width = `${step.progress}%`;
-            }
-            document.getElementById('build-status').innerText = "Build Complete. Downloading...";
-            document.getElementById('build-complete-msg').classList.remove('hidden');
             
-            // In standalone, export the HTML itself as the binary
-            const blob = new Blob([document.documentElement.outerHTML], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url;
-            a.download = `toryengine-studio-${target}${baseTarget === 'desktop' ? '.exe' : '.apk'}`;
-            a.click();
+            var currentStep = 0;
+            function runStep() {
+                if (currentStep >= steps.length) {
+                    document.getElementById('build-status').innerText = "Build Complete. Downloading...";
+                    document.getElementById('build-complete-msg').classList.remove('hidden');
+                    var blob = new Blob([document.documentElement.outerHTML], { type: 'application/octet-stream' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a'); a.href = url;
+                    a.download = "toryengine-studio-" + target + (baseTarget === 'desktop' ? '.exe' : '.apk');
+                    a.click();
+                    return;
+                }
+                var step = steps[currentStep];
+                document.getElementById('step-' + step.id).classList.add('active');
+                document.getElementById('build-status').innerText = step.msg;
+                setTimeout(function() {
+                    document.getElementById('step-' + step.id).classList.replace('active', 'completed');
+                    document.getElementById('build-progress-fill').style.width = step.progress + "%";
+                    currentStep++;
+                    runStep();
+                }, 1000 + Math.random() * 1000);
+            }
+            runStep();
         }
 
         window.onload = openSandboxEngine;
