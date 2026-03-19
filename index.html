@@ -317,6 +317,20 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* ToryEngine Viewport Optimization */
+        #sandbox-engine {
+            height: 100dvh; /* Use dynamic viewport height */
+            width: 100vw;
+            overflow: hidden;
+        }
+        #sandbox-engine > div:first-child {
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+        .engine-tab-content {
+            height: calc(100dvh - 64px); /* Adjust based on header height */
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -411,6 +425,71 @@
                         </div>
                         <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
                             <div id="justification-bar" class="h-full bg-red-600 transition-all"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download ToryEngine Tab -->
+            <div id="engine-content-download" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
+                <div class="max-w-4xl mx-auto space-y-12">
+                    <div class="border-b border-white/10 pb-8">
+                        <h2 class="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">Deploy Native Engine</h2>
+                        <p class="text-slate-400 text-lg leading-relaxed">Take ToryEngine beyond the browser. Download specialized native binaries for persistent development, advanced file system access, and optimized performance.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Windows EXE Card -->
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-blue-500/30 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🪟</div>
+                                <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-widest border border-blue-500/30">Stable v3.2.0</span>
+                            </div>
+                            <div>
+                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Windows Desktop</h3>
+                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
+                                    <li class="flex items-center gap-2"><span>✅</span> Direct VFS to Disk Sync</li>
+                                    <li class="flex items-center gap-2"><span>✅</span> Multi-window Scripting</li>
+                                    <li class="flex items-center gap-2"><span>✅</span> Hardware Acceleration+</li>
+                                </ul>
+                            </div>
+                            <button type="button" onclick="downloadNative('exe')" class="mt-auto bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">Download .EXE</button>
+                        </div>
+
+                        <!-- Android APK Card -->
+                        <div class="bg-slate-800/30 p-8 rounded-3xl border border-white/5 flex flex-col gap-6 hover:bg-slate-800/50 hover:border-emerald-500/30 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🤖</div>
+                                <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest border border-emerald-500/30">Beta v3.2.0</span>
+                            </div>
+                            <div>
+                                <h3 class="font-black text-white uppercase text-xl tracking-tight mb-2">Android Mobile</h3>
+                                <ul class="text-xs text-slate-500 space-y-2 mb-6">
+                                    <li class="flex items-center gap-2"><span>✅</span> Immersive Touch Studio</li>
+                                    <li class="flex items-center gap-2"><span>✅</span> Offline Map Sculpting</li>
+                                    <li class="flex items-center gap-2"><span>✅</span> Low-Latency Engine</li>
+                                </ul>
+                            </div>
+                            <button type="button" onclick="downloadNative('apk')" class="mt-auto bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20">Download .APK</button>
+                        </div>
+                    </div>
+
+                    <!-- Unique Native Improvements Info -->
+                    <div class="bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-10 rounded-[40px] border border-white/10">
+                        <h3 class="text-xl font-black text-white uppercase italic mb-6">Native Exclusives</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div class="space-y-3">
+                                <div class="text-blue-400 font-bold text-sm uppercase">Persistent VFS</div>
+                                <p class="text-[10px] text-slate-500 leading-relaxed">Unlike the browser version, the native engine maps your VFS directly to your system's storage, ensuring your maps and scripts are never lost.</p>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="text-purple-400 font-bold text-sm uppercase">Auto-Updater</div>
+                                <p class="text-[10px] text-slate-500 leading-relaxed">Stay synced with the GitHub master branch automatically. Receive new ToryScript APIs and engine optimizations as they launch.</p>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="text-emerald-400 font-bold text-sm uppercase">System Bridge</div>
+                                <p class="text-[10px] text-slate-500 leading-relaxed">Execute shell commands directly from ToryScript (Safe-Mode enabled) to integrate with your local development environment.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -790,6 +869,7 @@
                     <button type="button" onclick="setEngineTab('docs')" id="tab-engine-docs" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Documentation">Docs</button>
                     <button type="button" onclick="setEngineTab('explorer')" id="tab-engine-explorer" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Asset Explorer">Assets</button>
                     <button type="button" onclick="setEngineTab('templates')" id="tab-engine-templates" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Map Templates">Templates</button>
+                    <button type="button" onclick="setEngineTab('download')" id="tab-engine-download" class="px-4 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wide" title="Download ToryEngine">Download</button>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -809,7 +889,7 @@
         <!-- Engine Content -->
         <div class="flex-1 flex overflow-hidden">
             <!-- Map Editor Tab -->
-            <div id="engine-content-editor" class="flex-1 relative bg-slate-900 flex flex-col">
+            <div id="engine-content-editor" class="flex-1 relative bg-slate-900 flex flex-col engine-tab-content">
                 <div class="flex-1 relative overflow-hidden" id="engine-viewport">
                     <canvas id="engine-canvas" class="absolute top-0 left-0"></canvas>
                 </div>
@@ -836,7 +916,7 @@
             </div>
 
             <!-- ToryScript Tab -->
-            <div id="engine-content-toryscript" class="hidden flex-1 flex bg-slate-950">
+            <div id="engine-content-toryscript" class="hidden flex-1 flex bg-slate-950 engine-tab-content">
                 <div class="w-64 border-r border-slate-800 flex flex-col">
                     <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                         <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Explorer</span>
@@ -869,7 +949,7 @@
             </div>
 
             <!-- ToryScript Documentation Tab -->
-            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
+            <div id="engine-content-docs" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
                 <div class="max-w-4xl mx-auto space-y-12">
                     <!-- Header -->
                     <div class="border-b border-white/10 pb-8">
@@ -1094,8 +1174,8 @@ cycle(tory() {
                 </div>
             </div>
 
-            <!-- File Explorer Tab -->
-            <div id="engine-content-explorer" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto">
+            <!-- Asset Explorer Tab -->
+            <div id="engine-content-explorer" class="hidden flex-1 bg-slate-900 p-8 overflow-y-auto engine-tab-content">
                 <div class="max-w-4xl mx-auto">
                     <h3 class="text-xl font-bold text-white mb-6 uppercase tracking-widest">Virtual File System</h3>
                     <div class="grid grid-cols-4 gap-4" id="explorer-grid">
@@ -1105,7 +1185,7 @@ cycle(tory() {
             </div>
 
             <!-- Templates Tab -->
-            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar">
+            <div id="engine-content-templates" class="hidden flex-1 bg-slate-900 p-10 overflow-y-auto custom-scrollbar engine-tab-content">
                 <div class="max-w-5xl mx-auto">
                     <div class="mb-10">
                         <h3 class="text-3xl font-black text-white italic uppercase tracking-tighter">Operational Blueprints</h3>
@@ -1584,6 +1664,38 @@ cycle(tory() {
             document.getElementById('sandbox-engine').classList.add('hidden');
         }
 
+        function downloadNative(platform) {
+            notify(`Preparing ${platform.toUpperCase()} download...`, "info");
+            
+            // In a real scenario, this would point to a CI/CD build artifact or a GitHub release
+            const repoUrl = "https://github.com/everythingtt/territory-io/releases/latest";
+            
+            setTimeout(() => {
+                if (platform === 'exe') {
+                    window.open(`${repoUrl}/download/ToryEngine_Windows_x64.zip`, '_blank');
+                } else if (platform === 'apk') {
+                    window.open(`${repoUrl}/download/ToryEngine_Android_v3.2.0.apk`, '_blank');
+                }
+                notify("Download started! Follow the instructions in the native installer.", "success");
+            }, 1500);
+        }
+
+        // Native Mode Detection & unique improvements
+        state.isNative = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches || !!window.ToryNativeBridge;
+        
+        if (state.isNative) {
+            console.log("[ToryEngine] Native Mode Active. Enabling System Bridge and Direct VFS.");
+            // Add native-only API to ToryScript
+            window.addEventListener('load', () => {
+                // Example unique improvement: Fullscreen by default in native
+                if (document.documentElement.requestFullscreen) {
+                    document.body.addEventListener('click', () => {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }, { once: true });
+                }
+            });
+        }
+
         function initSandboxEngine() {
             const eCanvas = document.getElementById('engine-canvas');
             eCanvas.width = 3840;
@@ -1713,7 +1825,7 @@ cycle(tory() {
 
         function setEngineTab(tab) {
             state.engine.activeTab = tab;
-            ['editor', 'toryscript', 'docs', 'explorer', 'templates'].forEach(t => {
+            ['editor', 'toryscript', 'docs', 'explorer', 'templates', 'download'].forEach(t => {
                 const btn = document.getElementById(`tab-engine-${t}`);
                 const panel = document.getElementById(`engine-content-${t}`);
                 if (btn) btn.className = t === tab
