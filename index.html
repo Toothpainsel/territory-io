@@ -1346,21 +1346,121 @@ cycle(tory() {
                             <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Core Mechanics</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-blue-500/20 transition-all">
                                 <h4 class="text-blue-400 font-bold uppercase tracking-widest text-xs">The Grid System</h4>
                                 <p class="text-slate-400 text-sm leading-relaxed">The world is a high-resolution 384x216 grid. Every pixel is a tile that can be claimed, developed, or destroyed. The game engine uses optimized binary buffers to handle over 80,000 tiles in real-time.</p>
                             </div>
-                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-emerald-500/20 transition-all">
                                 <h4 class="text-emerald-400 font-bold uppercase tracking-widest text-xs">Economy & Income</h4>
                                 <p class="text-slate-400 text-sm leading-relaxed">Your wealth is generated every <b>second (Tick)</b>. Income scales with your territory size, city bonuses, and research levels. A large <b>Cycle (10s)</b> triggers major economic events and bot logic updates.</p>
                             </div>
-                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-amber-500/20 transition-all">
                                 <h4 class="text-amber-400 font-bold uppercase tracking-widest text-xs">Expansion Cost</h4>
                                 <p class="text-slate-400 text-sm leading-relaxed">Claiming tiles isn't free. Each successful claim increases your base tile cost by <b>$0.25</b>. Crossing water (Bridges) costs <b>5x</b> more than land. Strategy lies in efficient growth.</p>
                             </div>
-                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-purple-500/20 transition-all">
                                 <h4 class="text-purple-400 font-bold uppercase tracking-widest text-xs">Diplomacy & War</h4>
                                 <p class="text-slate-400 text-sm leading-relaxed">Declare wars to seize land. Wars require a <b>Justification</b> period (cycles). During war, expansion is cheaper but you suffer a balance penalty. Alliances allow for shared vision and protection.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-cyan-500/20 transition-all">
+                                <h4 class="text-cyan-400 font-bold uppercase tracking-widest text-xs">Dams & Enclosures</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Enclose water bodies completely within your borders to create <b>Dams</b>. Dams provide a massive <b>+$10</b> income bonus per cluster. It's the most efficient way to generate wealth without increasing tile costs.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4 hover:border-red-500/20 transition-all">
+                                <h4 class="text-red-400 font-bold uppercase tracking-widest text-xs">Capital Paralysis</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Losing your capital is catastrophic. Your empire will be <b>Paralyzed for 15 cycles</b>, meaning zero income and zero expansion capability. Rebuild it quickly via the 'Rebuild' menu.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Research & Development -->
+                    <section class="space-y-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center text-2xl">🧬</div>
+                            <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Research & Tech</h3>
+                        </div>
+                        <div class="bg-slate-800/30 p-10 rounded-[40px] border border-white/5 space-y-8">
+                            <p class="text-slate-400 text-sm leading-relaxed">Modernize your empire by spending <b>Research Tokens</b>. Tokens are earned slowly over time or through specific investments.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="space-y-2">
+                                    <h5 class="text-white font-bold text-xs uppercase">Economic Tree</h5>
+                                    <p class="text-slate-500 text-[10px]">Reduce tile costs, increase max balance, and lower war penalties.</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <h5 class="text-white font-bold text-xs uppercase">Military Tree</h5>
+                                    <p class="text-slate-500 text-[10px]">Unlock Missiles and Warplanes. Increase Air Support range and annex radius.</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <h5 class="text-white font-bold text-xs uppercase">Political Tree</h5>
+                                    <p class="text-slate-500 text-[10px]">Manage alliances and internal stability. (Coming soon in v3.3)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Management HUD -->
+                    <section class="space-y-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-emerald-600/20 rounded-2xl flex items-center justify-center text-2xl">📊</div>
+                            <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Management & Investments</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                                <h4 class="text-emerald-400 font-bold uppercase tracking-widest text-xs">City Bulk Management</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Access the Management Modal to view all your cities at once. Monitor their population, levels (hj), and development progress. You can bulk-develop cities if you have the balance.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-8 rounded-[32px] border border-white/5 space-y-4">
+                                <h4 class="text-blue-400 font-bold uppercase tracking-widest text-xs">Strategic Investments</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Invest your surplus balance into short-term projects. These provide massive income multipliers or token generation for a fixed duration. Choose between 'Scale' and 'Static' returns.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- War & Assault Planning -->
+                    <section class="space-y-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-red-600/20 rounded-2xl flex items-center justify-center text-2xl">⚔️</div>
+                            <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Warfare & Assault Planning</h3>
+                        </div>
+                        <div class="bg-slate-800/30 p-10 rounded-[40px] border border-white/5 space-y-8">
+                            <div class="space-y-4">
+                                <h4 class="text-red-500 font-black text-xs uppercase tracking-widest">Assault Planning Mode</h4>
+                                <p class="text-slate-400 text-sm leading-relaxed">Don't just attack—plan. Use the <b>Right-Click context menu</b> on an enemy to enter Planning Mode. Select multiple target tiles to queue up a massive simultaneous assault.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="bg-black/30 p-6 rounded-2xl border border-white/5">
+                                    <div class="text-white font-bold text-xs mb-2 uppercase italic">Air Support captures</div>
+                                    <p class="text-slate-500 text-[10px]">Use Warplanes to capture tiles deep behind enemy lines. Requires Military Research Level 2+.</p>
+                                </div>
+                                <div class="bg-black/30 p-6 rounded-2xl border border-white/5">
+                                    <div class="text-white font-bold text-xs mb-2 uppercase italic">Capital Destruction</div>
+                                    <p class="text-slate-500 text-[10px]">Targeting an enemy capital during war will paralyze their expansion for several cycles.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Game Modes & Controls -->
+                    <section class="space-y-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-cyan-600/20 rounded-2xl flex items-center justify-center text-2xl">🕹️</div>
+                            <h3 class="text-3xl font-black text-white uppercase italic tracking-tighter">Modes & Controls</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                                <div class="text-2xl mb-2">🖌️</div>
+                                <h5 class="text-white font-bold text-xs uppercase">Paint Mode</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Default mode. Click or drag to claim land and expand your borders.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                                <div class="text-2xl mb-2">🏢</div>
+                                <h5 class="text-white font-bold text-xs uppercase">Build Mode</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Enter build mode to place new cities on your territory for $1000 each.</p>
+                            </div>
+                            <div class="bg-slate-800/30 p-6 rounded-[32px] border border-white/5">
+                                <div class="text-2xl mb-2">🔍</div>
+                                <h5 class="text-white font-bold text-xs uppercase">Pan/Zoom</h5>
+                                <p class="text-slate-500 text-[10px] mt-2">Use mouse wheel or touch gestures to navigate the high-res map.</p>
                             </div>
                         </div>
                     </section>
@@ -1377,7 +1477,7 @@ cycle(tory() {
                                 <div class="text-4xl font-black text-blue-500/30 italic">01</div>
                                 <div class="space-y-2">
                                     <h4 class="text-white font-bold text-lg uppercase italic">Establish a Capital</h4>
-                                    <p class="text-slate-400 text-sm">Choose your spawn point wisely. Your capital is your economic heart, providing a massive <b>+$5</b> income bonus. If it falls, your empire is paralyzed.</p>
+                                    <p class="text-slate-400 text-sm leading-relaxed">Choose your spawn point wisely. Your capital is your economic heart, providing a massive <b>+$5</b> income bonus. Protect it at all costs—if it falls, your entire empire is paralyzed for 15 cycles.</p>
                                 </div>
                             </div>
                             <!-- Step 2 -->
@@ -1385,29 +1485,61 @@ cycle(tory() {
                                 <div class="text-4xl font-black text-emerald-500/30 italic">02</div>
                                 <div class="space-y-2">
                                     <h4 class="text-white font-bold text-lg uppercase italic">Found & Develop Cities</h4>
-                                    <p class="text-slate-400 text-sm">Cities increase your <b>Max Balance</b> and income. Develop them using the <b>City Donut Menu</b> (click a city) to reach higher levels (hj1 to hj8) for exponential growth.</p>
+                                    <p class="text-slate-400 text-sm leading-relaxed">Cities increase your <b>Max Balance</b> and income. Use 'Build Mode' to place them. Once built, click a city to open the <b>Donut Menu</b> and upgrade its level (hj1 to hj8) for exponential growth.</p>
                                 </div>
                             </div>
                             <!-- Step 3 -->
+                            <div class="bg-gradient-to-r from-indigo-600/10 to-transparent p-8 rounded-[32px] border border-indigo-500/20 flex gap-6">
+                                <div class="text-4xl font-black text-indigo-500/30 italic">03</div>
+                                <div class="space-y-2">
+                                    <h4 class="text-white font-bold text-lg uppercase italic">Manage & Invest</h4>
+                                    <p class="text-slate-400 text-sm leading-relaxed">Use the <b>Management HUD</b> to keep track of your growing empire. Bulk-develop your cities to save time and use <b>Investments</b> to multiply your income during critical expansion phases.</p>
+                                </div>
+                            </div>
+                            <!-- Step 4 -->
                             <div class="bg-gradient-to-r from-purple-600/10 to-transparent p-8 rounded-[32px] border border-purple-500/20 flex gap-6">
-                                <div class="text-4xl font-black text-purple-500/30 italic">03</div>
+                                <div class="text-4xl font-black text-purple-500/30 italic">04</div>
                                 <div class="space-y-2">
                                     <h4 class="text-white font-bold text-lg uppercase italic">Research & Modernize</h4>
-                                    <p class="text-slate-400 text-sm">Spend Research Tokens to unlock military tech (Missiles, Warplanes) or economic buffs. Higher tech allows for <b>Air Support</b> captures and cheaper rebuilding.</p>
+                                    <p class="text-slate-400 text-sm leading-relaxed">Spend Research Tokens to unlock military tech (Missiles, Warplanes) or economic buffs. Higher tech allows for <b>Air Support</b> captures and cheaper rebuilding.</p>
+                                </div>
+                            </div>
+                            <!-- Step 5 -->
+                            <div class="bg-gradient-to-r from-red-600/10 to-transparent p-8 rounded-[32px] border border-red-500/20 flex gap-6">
+                                <div class="text-4xl font-black text-red-500/30 italic">05</div>
+                                <div class="space-y-2">
+                                    <h4 class="text-white font-bold text-lg uppercase italic">Orchestrate Conquest</h4>
+                                    <p class="text-slate-400 text-sm leading-relaxed">Enter <b>Assault Planning</b> by right-clicking enemies. Target strategic cities and capitals to collapse rival empires. Use alliances to secure your flanks while you focus on the front lines.</p>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     <!-- Pro Tips -->
-                    <div class="bg-slate-800/20 p-10 rounded-[40px] border border-white/5">
-                        <h4 class="text-white font-black uppercase text-xs tracking-[0.3em] mb-6 text-center">Architect Pro-Tips</h4>
-                        <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] text-slate-500 uppercase font-bold">
-                            <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Use Dams to enclose water for huge bonuses.</li>
-                            <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Watch for 'Insane' bots; they expand every tick.</li>
-                            <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Keep balance below Max to avoid overpop penalties.</li>
-                            <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Use ToryScript to automate complex map setups.</li>
-                        </ul>
+                    <div class="bg-slate-800/20 p-10 rounded-[40px] border border-white/5 space-y-10">
+                        <div class="space-y-4">
+                            <h4 class="text-white font-black uppercase text-xs tracking-[0.3em] text-center">Architect Pro-Tips</h4>
+                            <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] text-slate-500 uppercase font-bold">
+                                <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Use Dams to enclose water for huge bonuses.</li>
+                                <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Watch for 'Insane' bots; they expand every tick.</li>
+                                <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Keep balance below Max to avoid overpop penalties.</li>
+                                <li class="flex items-center gap-3"><span class="text-blue-500">●</span> Use ToryScript to automate complex map setups.</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-6 border-t border-white/5 pt-10">
+                            <h4 class="text-white font-black uppercase text-xs tracking-[0.3em] text-center">Advanced Mechanics</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-2">
+                                    <h5 class="text-red-400 font-bold text-[10px] uppercase">Overpopulation Penalty</h5>
+                                    <p class="text-slate-500 text-[10px] leading-relaxed">Cities that reach their population cap without being upgraded will trigger an <b>Overpopulation Penalty</b>, draining <b>0.5%</b> of your total balance every second. Upgrade your cities or keep an eye on your population levels!</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <h5 class="text-blue-400 font-bold text-[10px] uppercase">Power Index (PWR)</h5>
+                                    <p class="text-slate-500 text-[10px] leading-relaxed">The leaderboard sorts by <b>Power Index</b>, a complex calculation based on territory size, city development (OVCD), balance, and active alliances. Being #1 in tiles doesn't always mean you're the most powerful.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
