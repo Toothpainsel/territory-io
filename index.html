@@ -2517,7 +2517,8 @@ setupEditor();` },
                     tokens: { miner: 0 },
                     political: {}
                 },
-                lastMinerTick: Date.now()
+                lastMinerTick: Date.now(),
+                MAX_TOKENS: 10000
             },
             
             investments: [], // Active investments: { id, name, bonus, scale, remainingTicks }
@@ -6176,6 +6177,8 @@ print("Iron Fortress Blueprint Deployed.");`
 
         function executeBotAssault(war) {
             const bot = state.entities[war.host];
+            if (!bot || bot.paralyzedCycles > 0) return; // Safeguard and check paralysis
+
             const target = state.entities[war.target];
             const diff = bot.difficulty || 'ez';
             
@@ -6188,36 +6191,45 @@ print("Iron Fortress Blueprint Deployed.");`
             else if (diff === 'hard') { turnCount = 7; tilesPerTurn = 12; focusOnCities = true; }
             else if (diff === 'insane') { turnCount = 10; tilesPerTurn = 20; focusOnCities = true; }
 
-            // Find valid target tiles (bordering or strategic targets for Air Support)
+            // Find valid target tiles - Optimize by using border Set
             const targetIndices = [];
             const cx = bot.capitalPos ? bot.capitalPos.x : -1, cy = bot.capitalPos ? bot.capitalPos.y : -1;
+            const myBorders = state.bordersByOwner[war.host];
+            if (!myBorders) return;
 
-            for (let i = 0; i < state.tileOwners.length; i++) {
-                if (state.tileOwners[i] === war.target) {
-                    const x = i % CONFIG.COLS, y = Math.floor(i / CONFIG.COLS);
-                    const neighbors = [{x:x+1,y:0},{x:x-1,y:0},{x:0,y:y+1},{x:0,y:y-1}];
-                    
-                    // Reachable via border
-                    const isBordering = neighbors.some(n => {
-                        const nx = x + n.x, ny = y + n.y;
-                        if (nx < 0 || nx >= CONFIG.COLS || ny < 0 || ny >= CONFIG.ROWS) return false;
-                        const owner = state.tileOwners[ny * CONFIG.COLS + nx];
-                        return owner === war.host || war.allies.includes(owner);
-                    });
-
-                    // Strategic targets via Air Support (Cities/Capitals within 200 range)
-                    const type = state.tileTypes[i];
-                    let isAirSupportTarget = false;
-                    if (cx !== -1 && (type === 5 || type === 6)) {
-                        const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
-                        if (dist <= CONFIG.AIR_SUPPORT_RANGE) isAirSupportTarget = true;
+            // 1. Get targets bordering the bot
+            myBorders.forEach(idx => {
+                const x = idx % CONFIG.COLS, y = Math.floor(idx / CONFIG.COLS);
+                const neighbors = [
+                    {x: x-1, y}, {x: x+1, y}, {x, y: y-1}, {x, y: y+1}
+                ];
+                neighbors.forEach(n => {
+                    if (n.x >= 0 && n.x < CONFIG.COLS && n.y >= 0 && n.y < CONFIG.ROWS) {
+                        const nIdx = n.y * CONFIG.COLS + n.x;
+                        if (state.tileOwners[nIdx] === war.target) {
+                            targetIndices.push(nIdx);
+                        }
                     }
+                });
+            });
 
-                    if (isBordering || isAirSupportTarget) targetIndices.push(i);
-                }
+            // 2. Add strategic targets via Air Support (if within range)
+            if (cx !== -1) {
+                state.cityIndices.forEach(idx => {
+                    if (state.tileOwners[idx] === war.target) {
+                        const tx = idx % CONFIG.COLS, ty = Math.floor(idx / CONFIG.COLS);
+                        const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
+                        if (dist <= CONFIG.AIR_SUPPORT_RANGE) {
+                            targetIndices.push(idx);
+                        }
+                    }
+                });
             }
 
             if (targetIndices.length === 0) return;
+
+            // Use a unique Set to deduplicate targets
+            const uniqueTargets = Array.from(new Set(targetIndices));
 
             // Execute turns
             let currentTurn = 0;
@@ -6226,9 +6238,9 @@ print("Iron Fortress Blueprint Deployed.");`
                 
                 // Pick targets (prioritize cities/capitals for higher difficulties)
                 const batch = [];
-                const sortedTargets = [...targetIndices].filter(idx => !state.launchedMissiles.has(idx)).sort((a, b) => {
-                    const typeA = state.tileTypes[a], typeB = state.tileTypes[b];
+                const sortedTargets = uniqueTargets.filter(idx => !state.launchedMissiles.has(idx)).sort((a, b) => {
                     if (focusOnCities) {
+                        const typeA = state.tileTypes[a], typeB = state.tileTypes[b];
                         if (typeA === 6 || typeB === 6) return typeB === 6 ? 1 : -1;
                         if (typeA === 5 || typeB === 5) return typeB === 5 ? 1 : -1;
                     }
@@ -6244,58 +6256,52 @@ print("Iron Fortress Blueprint Deployed.");`
                     const tx = idx % CONFIG.COLS, ty = Math.floor(idx / CONFIG.COLS);
                     const type = state.tileTypes[idx];
                     
-                    const neighbors = [idx-1, idx+1, idx-CONFIG.COLS, idx+CONFIG.COLS];
-                    const isBordering = neighbors.some(n => n >= 0 && n < state.tileTypes.length && (state.tileOwners[n] === war.host || war.allies.includes(state.tileOwners[n])));
+                    const isBordering = (state.tileOwners[idx-1] === war.host || state.tileOwners[idx+1] === war.host || 
+                                        state.tileOwners[idx-CONFIG.COLS] === war.host || state.tileOwners[idx+CONFIG.COLS] === war.host);
 
                     if (!isBordering && cx !== -1) {
                         const dist = Math.sqrt(Math.pow(tx - cx, 2) + Math.pow(ty - cy, 2));
                         if (dist <= CONFIG.AIR_SUPPORT_RANGE) {
-                            // Air Support Visual for Bot
-                            state.launchedMissiles.add(idx); // Track launch
-                            const angle = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
-                            const rocket = document.createElement('div');
-                            rocket.className = 'plane';
-                            rocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img" style="transform: rotate(${angle}deg)">`;
-                            rocket.style.left = `${cx * CONFIG.TILE_SIZE}px`;
-                            rocket.style.top = `${cy * CONFIG.TILE_SIZE}px`;
-                            container.appendChild(rocket);
-                            
-                            const launchSfx = new Audio('assets/fx/launching-missile.mp3');
-                            launchSfx.volume = 0.2;
-                            launchSfx.play().catch(() => {});
-
-                            setTimeout(() => { 
-                                rocket.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
-                                rocket.style.top = `${ty * CONFIG.TILE_SIZE}px`; 
-                            }, 50);
-                            
-                            setTimeout(() => {
-                                state.launchedMissiles.delete(idx); // Clean up
-                                rocket.remove();
-                                if (type === 5 || type === 6) {
-                                    createExplosion(tx, ty);
-                                }
-                            }, 1000);
-
-                            // Apply Air Support cost to bot (matching player logic)
+                            // Air Support Logic
+                            state.launchedMissiles.add(idx);
                             const cost = (bot.tileCost * CONFIG.WARPLANE_COST_MULT) * getWarCostMultiplier(war.host, true);
                             if (bot.balance >= cost || bot.balance > -50000) {
                                 bot.balance -= cost;
-                            } else {
-                                return; // Too much debt
-                            }
-                        } else {
-                            // Skip tiles out of range for bots too
-                            return;
-                        }
+                                // Simple visual for bot (no heavy GIF elements for performance if many)
+                                if (state.entities.length < 30) {
+                                    const rocket = document.createElement('div');
+                                    rocket.className = 'plane';
+                                    rocket.innerHTML = `<img src="assets/rocket.gif" class="rocket-img">`;
+                                    rocket.style.left = `${cx * CONFIG.TILE_SIZE}px`;
+                                    rocket.style.top = `${cy * CONFIG.TILE_SIZE}px`;
+                                    container.appendChild(rocket);
+                                    setTimeout(() => { 
+                                        rocket.style.left = `${tx * CONFIG.TILE_SIZE}px`; 
+                                        rocket.style.top = `${ty * CONFIG.TILE_SIZE}px`; 
+                                    }, 50);
+                                    setTimeout(() => {
+                                        state.launchedMissiles.delete(idx);
+                                        rocket.remove();
+                                        if (type === 5 || type === 6) createExplosion(tx, ty);
+                                    }, 1000);
+                                } else {
+                                    state.launchedMissiles.delete(idx);
+                                }
+                            } else { return; }
+                        } else { return; }
                     }
 
-                    // Bots pay for claims during assault (cost already handled above for Air Support)
                     if (bot.balance > -50000) {
                         claim(tx, ty, false, war.host);
-                    } else {
-                        return; // Too much debt
                     }
+                });
+
+                currentTurn++;
+                setTimeout(executeTurn, 1000);
+            };
+
+            executeTurn();
+        }
                     
                     war.losses.target.tiles++;
                     if (type === 5 || type === 6) {
@@ -7415,7 +7421,7 @@ print("Iron Fortress Blueprint Deployed.");`
         }
 
         function updateResearchUI() {
-            document.getElementById('res-token-count').innerText = state.research.tokens;
+            document.getElementById('res-token-count').innerText = `${state.research.tokens}${state.research.tokens >= state.research.MAX_TOKENS ? ' (MAX)' : ''}`;
         }
 
         function getResearchBonus(tree, key, max, startVal = 0.01, endVal = 0.95) {
@@ -7501,7 +7507,7 @@ print("Iron Fortress Blueprint Deployed.");`
             const minerLevel = state.research.trees.tokens.miner;
             if (now - state.research.lastMinerTick >= 30000) {
                 const tokensMined = 1 + minerLevel;
-                state.research.tokens += tokensMined;
+                state.research.tokens = Math.min(state.research.MAX_TOKENS, state.research.tokens + tokensMined);
                 state.research.lastMinerTick = now;
                 notify(`${tokensMined} R-Token${tokensMined > 1 ? 's' : ''} generated! Total: ${state.research.tokens}`, "success");
                 updateResearchUI();
