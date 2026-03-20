@@ -1089,6 +1089,30 @@ tory setupMap() {      // Function definition
                                     <h4 class="text-white font-bold text-sm mb-2">saveFile(data, name)</h4>
                                     <p class="text-slate-400 text-xs italic">Standalone Only: Save map data directly to the local filesystem.</p>
                                 </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">maxEntities(n)</h4>
+                                    <p class="text-slate-400 text-xs italic">Sets the total number of entities (bots/players) for the next test.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">gameMode(mode)</h4>
+                                    <p class="text-slate-400 text-xs italic">Sets mode: 'ffa' or 'team'.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">spawnType(type)</h4>
+                                    <p class="text-slate-400 text-xs italic">Sets spawn: 'random' or 'selectable'.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">difficulty(level)</h4>
+                                    <p class="text-slate-400 text-xs italic">Sets AI difficulty: 'ez', 'strategic', 'hard', or 'insane'.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">playerName(name)</h4>
+                                    <p class="text-slate-400 text-xs italic">Sets the commander name for the player.</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-sm mb-2">botNames([names])</h4>
+                                    <p class="text-slate-400 text-xs italic">Defines a custom pool of names for bots.</p>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -3471,6 +3495,12 @@ toggleExplorer();` },
                 console.log("- claim([{x, y}, ...], ownerIdx) : Batch claim tiles");
                 console.log("- player('balance', 5000) : Set player balance");
                 console.log("- bot(idx) : Get bot data");
+                console.log("- maxEntities(n) : Set entity count for test");
+                console.log("- gameMode(mode) : Set 'ffa' or 'team'");
+                console.log("- spawnType(type) : Set 'random' or 'selectable'");
+                console.log("- difficulty(level) : Set AI level");
+                console.log("- playerName(name) : Set commander name");
+                console.log("- botNames([names]) : Set bot name pool");
                 console.log("- tick(tory() { ... }) : Add onTick hook");
                 console.log("- cycle(tory() { ... }) : Add onCycle hook");
                 console.log("- toggleExplorer() : Open Live Workspace Explorer");
