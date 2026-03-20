@@ -417,8 +417,12 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="bg-black/50 rounded-2xl p-6 border border-white/5 max-h-[60vh] overflow-y-auto">
+            <div class="bg-black/50 rounded-2xl p-6 border border-white/5 max-h-[60vh] overflow-y-auto mb-6">
                 <pre id="workspace-file-content" class="text-blue-400 font-mono text-xs whitespace-pre-wrap"></pre>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="copyFileContent()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold text-slate-300 text-xs uppercase tracking-widest transition-all">Copy Content</button>
+                <button id="btn-execute-file" onclick="executeFileContent()" class="hidden flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold text-white text-xs uppercase tracking-widest transition-all">Execute Script</button>
             </div>
         </div>
     </div>
@@ -1292,10 +1296,10 @@ tory setupMap() {      // Function definition
                                     <p class="text-slate-400 text-sm leading-relaxed font-bold">Every game now carries a hidden Virtual File System (VFS). This allows architects to monitor project structures, view configurations, and debug scripts in real-time during live gameplay.</p>
                                     <ul class="text-slate-500 text-xs space-y-2 list-disc list-inside">
                                         <li>Hierarchical directory navigation.</li>
-                                        <li>Context-aware file viewer modal.</li>
                                         <li>Real-time <code class="text-blue-400">.live</code> memory inspection.</li>
-                                        <li>Seamless compatibility with ToryEngine Studio.</li>
-                                        <li>Persistent storage across game reloads.</li>
+                                        <li>One-click <b>Execute Script</b> for .tory files.</li>
+                                        <li><b>Copy Content</b> for easy code sharing.</li>
+                                        <li>Modular "Live Map" generation for any game session.</li>
                                     </ul>
                                 </div>
                                 <div class="w-full md:w-64 bg-black/40 p-6 rounded-2xl border border-blue-500/20 text-center">
@@ -2209,6 +2213,24 @@ setupEditor();` },
             };
         }
 
+        function copyFileContent() {
+            const content = document.getElementById('workspace-file-content').innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                notify("Content copied to clipboard", "success");
+            }).catch(err => {
+                notify("Failed to copy: " + err, "error");
+            });
+        }
+
+        function executeFileContent() {
+            const content = document.getElementById('workspace-file-content').innerText;
+            const title = document.getElementById('workspace-file-title').innerText;
+            if (confirm(`Execute "${title}" as ToryScript?`)) {
+                ToryScript.run(content, { id: 'manual-exec-' + Date.now() });
+                document.getElementById('workspace-file-modal').classList.add('hidden');
+            }
+        }
+
         function toggleExplorer() {
             if (state.engine.initialized) {
                 console.log("ToryScript Explorer: Disabled in Engine Mode. Use built-in Asset Explorer tab.");
@@ -2225,11 +2247,52 @@ setupEditor();` },
 
             const sidebar = document.createElement("div");
             sidebar.id = id;
-            sidebar.style.cssText = "position:fixed;right:0;top:0;width:350px;height:100vh;background:rgba(2,6,23,0.95);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:30px;color:white;font-family:'Inter',sans-serif;overflow-y:auto;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:-20px 0 50px rgba(0,0,0,0.5)";
+            sidebar.style.cssText = "position:fixed;right:0;top:0;width:350px;height:100vh;background:rgba(2,6,23,0.98);backdrop-filter:blur(30px);border-left:1px solid rgba(255,255,255,0.1);z-index:9999;padding:0;color:white;font-family:'Inter',sans-serif;overflow:hidden;transform:translateX(100%);transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:-20px 0 80px rgba(0,0,0,0.8)";
             
-            let html = "<h2 style='margin-bottom:25px;font-size:18px;font-weight:900;color:#3b82f6;letter-spacing:-0.05em;text-transform:uppercase;font-style:italic'>Live Map Workspace</h2>";
-            html += "<div style='font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:15px'>Project Directories</div>";
-            html += "<div id='live-vfs-root' style='display:flex;flex-direction:column;gap:4px'></div>";
+            let html = `
+                <div class="flex flex-col h-full">
+                    <!-- Sidebar Header -->
+                    <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <div>
+                            <h2 class="text-lg font-black text-blue-400 uppercase italic tracking-tighter">Live Workspace</h2>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Virtual File System</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleExplorer()" title="Refresh Explorer" class="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            </button>
+                            <button onclick="toggleExplorer()" title="Close Explorer" class="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-slate-400 hover:text-red-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Sidebar Content -->
+                    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div style='font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:15px'>Project Directories</div>
+                        <div id='live-vfs-root' style='display:flex;flex-direction:column;gap:4px'></div>
+                    </div>
+
+                    <!-- Sidebar Footer -->
+                    <div class="p-6 border-t border-white/5 bg-black/20">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-[9px] text-slate-500 font-bold uppercase">System Status</span>
+                            <span class="flex items-center gap-1.5 text-[9px] text-emerald-400 font-bold uppercase">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Connected
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                <div class="text-[8px] text-slate-500 font-bold uppercase mb-1">Entities</div>
+                                <div class="text-sm font-black text-white">${state.entities.length}</div>
+                            </div>
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                <div class="text-[8px] text-slate-500 font-bold uppercase mb-1">Tick Rate</div>
+                                <div class="text-sm font-black text-white">1.0s</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
             
             sidebar.innerHTML = html;
             document.body.appendChild(sidebar);
@@ -2239,20 +2302,32 @@ setupEditor();` },
                 container.style.paddingLeft = (depth * 15) + "px";
                 
                 const item = document.createElement("div");
-                item.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:all 0.2s;font-size:12px;color:#cbd5e1";
-                item.onmouseover = () => { item.style.background = "rgba(255,255,255,0.05)"; item.style.color = "white"; };
-                item.onmouseout = () => { item.style.background = "transparent"; item.style.color = "#cbd5e1"; };
+                item.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;cursor:pointer;transition:all 0.2s;font-size:12px;color:#cbd5e1";
+                item.className = "hover:bg-white/5 hover:text-white group";
                 
                 const icon = node.type === 'folder' ? "📁" : (node.type === 'live' ? "⚡" : "📄");
-                item.innerHTML = `<span>${icon}</span><span style='flex:1'>${node.name}</span>`;
+                item.innerHTML = `
+                    <span class="text-xs opacity-70 group-hover:opacity-100">${icon}</span>
+                    <span class="flex-1 truncate font-medium">${node.name}</span>
+                    ${node.type === 'script' ? `<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Script</span>` : ''}
+                `;
                 
                 if (node.type === 'script' || node.type === 'config' || node.type === 'live') {
                     item.onclick = (e) => {
                         e.preventDefault();
                         const modal = document.getElementById('workspace-file-modal');
+                        const execBtn = document.getElementById('btn-execute-file');
+                        
                         document.getElementById('workspace-file-title').innerText = node.name;
                         document.getElementById('workspace-file-path').innerText = node.type === 'live' ? "MEM://" + node.name : "VFS://" + node.name;
                         
+                        // Show/Hide Execute button
+                        if (node.type === 'script' || node.name.endsWith('.tory')) {
+                            execBtn.classList.remove('hidden');
+                        } else {
+                            execBtn.classList.add('hidden');
+                        }
+
                         let content = "";
                         if (node.type === 'live') {
                             const buffer = state[node.bufferKey];
