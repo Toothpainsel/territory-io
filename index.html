@@ -1698,6 +1698,37 @@ cycle(tory() {
                         </button>
                     </div>
 
+                    <!-- Data & Cache Management -->
+                    <section class="space-y-6">
+                        <h3 class="text-xl font-bold text-red-500 uppercase tracking-widest flex items-center gap-3">
+                            <span class="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center text-sm">🛠️</span>
+                            System Maintenance
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-slate-800/50 p-8 rounded-3xl border border-red-500/20 space-y-6 flex flex-col">
+                                <div>
+                                    <h4 class="text-lg font-bold text-white uppercase">Reset Workspace</h4>
+                                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Clear VFS Storage Only</p>
+                                </div>
+                                <p class="text-slate-400 text-sm leading-relaxed flex-1">Wipe all local scripts, configurations, and map data in the Virtual File System. This will restore the default templates and blueprints.</p>
+                                <button onclick="resetVFSStorage()" class="w-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white py-4 rounded-2xl font-bold transition-all uppercase tracking-widest text-[10px] border border-red-500/30">
+                                    Purge VFS Data
+                                </button>
+                            </div>
+
+                            <div class="bg-slate-800/50 p-8 rounded-3xl border border-blue-500/20 space-y-6 flex flex-col">
+                                <div>
+                                    <h4 class="text-lg font-bold text-white uppercase">Clear Cache & Sync</h4>
+                                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Full Site Data Reset</p>
+                                </div>
+                                <p class="text-slate-400 text-sm leading-relaxed flex-1">Unregister Service Workers and clear all cached assets. Use this if you are experiencing persistent issues with updates or asset loading.</p>
+                                <button onclick="clearSiteCache()" class="w-full bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white py-4 rounded-2xl font-bold transition-all uppercase tracking-widest text-[10px] border border-blue-500/30">
+                                    Force Full Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Unique Improvements Section -->
                     <section class="space-y-6">
                         <h3 class="text-xl font-bold text-amber-500 uppercase tracking-widest">App-Only Features</h3>
@@ -4071,6 +4102,34 @@ print("Iron Fortress Blueprint Deployed.");`
             const interval = setInterval(async () => {
                 if (await check()) clearInterval(interval);
             }, CONFIG.UPDATE_CHECK_INTERVAL);
+        }
+
+        function resetVFSStorage() {
+            if (confirm("This will PERMANENTLY delete all your local scripts and map data. Blueprints will be restored to defaults. Proceed?")) {
+                localStorage.removeItem('tory_engine_vfs');
+                localStorage.removeItem('tory_vfs_backup');
+                notify("VFS Storage Purged. Refreshing...", "success");
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        async function clearSiteCache() {
+            if (confirm("This will unregister Service Workers and clear the asset cache. The page will reload. Proceed?")) {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                    }
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) {
+                        await caches.delete(key);
+                    }
+                }
+                notify("Cache Cleared. Forcing reload...", "success");
+                setTimeout(() => location.reload(true), 1000);
+            }
         }
 
         // Service Worker Update Handling
