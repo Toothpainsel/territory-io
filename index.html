@@ -2111,7 +2111,7 @@ tory setupEditor() {
 
 setupEditor();` },
                             { id: 's2', name: 'archipelago.tory', type: 'script', content: '// ToryScript Archipelago Generator\nreset();\nseed(0.2, 0.5);\n\n// Add some manual islands\nisland(100, 100, 20, "land");\nisland(284, 150, 15, "land");\n\n// Add cities\ncity(100, 100);\ncity(284, 150);\n\nhome(100, 100);\nprint("Archipelago Generated!");' },
-                            { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: `// Advanced Live Workspace Explorer v3.0
+                            { id: 's3', name: 'workspace_explorer.tory', type: 'script', content: `// Advanced Live Workspace Explorer v3.1
 // Must be executed via console: ToryScript.exec('toggleExplorer()')
 
 tory toggleExplorer() {
@@ -2143,16 +2143,33 @@ tory toggleExplorer() {
         item.onmouseover = tory() { item.style.background = "rgba(255,255,255,0.05)"; item.style.color = "white"; };
         item.onmouseout = tory() { item.style.background = "transparent"; item.style.color = "#cbd5e1"; };
         
-        tory icon = node.type === 'folder' ? "📁" : "📄";
+        tory icon = node.type === 'folder' ? "📁" : (node.type === 'live' ? "⚡" : "📄");
         item.innerHTML = "<span>" + icon + "</span><span style='flex:1'>" + node.name + "</span>";
         
-        if (node.type === 'script' || node.type === 'config') {
+        if (node.type === 'script' || node.type === 'config' || node.type === 'live') {
             item.onclick = tory(e) {
                 e.preventDefault();
                 tory modal = document.getElementById('workspace-file-modal');
                 document.getElementById('workspace-file-title').innerText = node.name;
-                document.getElementById('workspace-file-path').innerText = "VFS://" + node.id;
-                document.getElementById('workspace-file-content').innerText = node.content;
+                document.getElementById('workspace-file-path').innerText = node.type === 'live' ? "MEM://" + node.name : "VFS://" + node.id;
+                
+                tory content = "";
+                if (node.type === 'live') {
+                    tory buffer = gamestate[node.bufferKey];
+                    if (buffer) {
+                        content = "// Real-time Game Memory: " + node.name + "\\n";
+                        content += "// Length: " + buffer.length + " bytes\\n\\n";
+                        // Show a snippet of the buffer (first 1000 bytes)
+                        tory snippet = Array.from(buffer.slice(0, 1000)).join(", ");
+                        content += "Buffer Data (Snippet):\\n[" + snippet + "...]";
+                    } else {
+                        content = "Error: Buffer not found in state.";
+                    }
+                } else {
+                    content = node.content;
+                }
+                
+                document.getElementById('workspace-file-content').innerText = content;
                 modal.classList.remove('hidden');
             };
         }
@@ -2168,12 +2185,29 @@ tory toggleExplorer() {
         return container;
     };
     
+    // Inject Live Memory Virtual Folder
+    tory liveFolder = {
+        id: 'live_mem',
+        name: 'live_memory',
+        type: 'folder',
+        children: [
+            { name: 'tileTypes.live', type: 'live', bufferKey: 'tileTypes' },
+            { name: 'tileOwners.live', type: 'live', bufferKey: 'tileOwners' },
+            { name: 'cityLevels.live', type: 'live', bufferKey: 'cityLevels' },
+            { name: 'tileFlags.live', type: 'live', bufferKey: 'tileFlags' }
+        ]
+    };
+    
     tory vfsRoot = document.getElementById('live-vfs-root');
-    // Use the engine object from the ToryScript API scope
-    vfsRoot.appendChild(renderNode(engine.vfs.root, 0));
+    // Create a temporary root clone to include the live folder without modifying persistent VFS
+    tory displayRoot = { children: [...engine.vfs.root.children, liveFolder] };
+    
+    displayRoot.children.forEach(tory(child) {
+        vfsRoot.appendChild(renderNode(child, 0));
+    });
     
     setTimeout(tory() { sidebar.style.transform = "translateX(0)"; }, 10);
-    print("Live Workspace Engaged.");
+    print("Live Workspace Engaged with Memory Inspection.");
 }
 
 toggleExplorer();` },
